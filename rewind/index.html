@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html> 
 <head> 
-	<title>Simple Example</title> 
+	<title>A trip down the memory lane...</title> 
     <link rel="stylesheet" href="js/jquery-ui-1.11.3/jquery-ui.css" />
 	
 	<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false" type="text/javascript"></script> 
@@ -101,6 +101,13 @@ $(function () {
 			$( "#date" ).text(dateAsString);
 			var locations = getLocationsOnDate(dateAsString);
 			createHyperlapse(locations);
+		},
+
+		beforeShowDay: function(date) {
+			console.log(date);
+			var formattedDate = moment(date).format("MM/DD/YYYY");
+			var enabled = locationsByDate[formattedDate] ? true : false;
+			return [enabled, "", ""];
 		}
 	});
 	
@@ -118,10 +125,10 @@ $(function () {
 		});
 	});
 	
-	var dateGrouppedLocations = null;
+	var locationsByDate = null;
 	
 	function processLocationExport(fileContents){
-		dateGrouppedLocations = parseLocationJson(fileContents);
+		locationsByDate = parseLocationJson(fileContents);
 		$("#datePicker").show();
 		//var urls = generateStreetViewUrls(locations, false);
 		//var urls = generateStreetViewUrls(locations, true);
@@ -130,7 +137,7 @@ $(function () {
 	function getLocationsOnDate(date) {
 		var locationHtml = "";
 		
-		var locations = dateGrouppedLocations[date];
+		var locations = locationsByDate[date];
 		locations.sort(function(a, b) {
 			return a.milis - b.milis;
 		});
@@ -227,11 +234,15 @@ $(function () {
 
 });
 		
-	</script> 
+	</script>
 </head> 
-<body> 
-    <div id="pano"></div>
-	<input id="slider" type="range" name="points" min="0" max="10" style="width:1200px; display:none;">
+<body>
+	<h1>Rewind a trip</h1> 
+	<div id="page-wrapper">
+		Select a json file: 
+		<input type="file" id="fileInput">
+	</div>
+	<br>
 	<div id="calendar">
 	    <form>
 			<legend>Pick a date:</legend>
@@ -239,19 +250,7 @@ $(function () {
 	    </form>
 		<p id="date"/>
 	</div>
-	<br>
-	<div id="page-wrapper">
-		<h1>Json File Reader</h1>
-		<div>
-			Select a json file: 
-			<input type="file" id="fileInput">
-		</div>
-		<br>
-		<div id="loadProg"></div>
-		<div id="parseProg"></div>
-		<br>
-		<h3>Streetview URLs:</h3>
-		<div id="urlList"></div>
-	</div>
+    <div id="pano"></div>
+	<input id="slider" type="range" name="points" min="0" max="10" style="width:1200px; display:none;">
 </body> 
 </html>
