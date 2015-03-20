@@ -13,7 +13,9 @@
 		<br>
 		<h3></h3>
 		<div id="questionList"></div>
-		<button id="submitButton">Submit</button>
+		<button id="backButton" style="display:none">Back</button>
+		<button id="nextButton" style="display:none">Next</button>
+		<button id="submitButton" style="display:none">Submit</button>
 	</div>
 <script src="./jquery.min.js"></script>
 <script>
@@ -34,6 +36,8 @@ window.onload = function() {
 }
 
 function processLocationExport(fileContents){
+	var imageIndex = 0;
+	var imageCount = 10;
 	var locations = parseLocationJson(fileContents);
 	//var urls = generateStreetViewUrls(locations, false);
 	var urls = generateStreetViewUrls(locations, true);
@@ -41,7 +45,7 @@ function processLocationExport(fileContents){
 	var questionsHtml = "";
 
 	var questionHtmlTpl = "" +
-		"<div class='location-questions'>" +
+		"<div class='location-questions' id='q{{INDEX}}'>" +
 			"<img src='{{SRC}}'></img>" +
 			"<ol>" +
 				"<li class='question'>" +
@@ -69,14 +73,22 @@ function processLocationExport(fileContents){
 		"</div>";
 
 	
-	urls.slice(0, 10).forEach(function(url, i) {
+	urls.slice(0, imageCount).forEach(function(url, i) {
 //		questionsHtml += "<a href='"+url+"'>"+url+"</a><br/>";
 		var questionHtml = questionHtmlTpl.replace("{{SRC}}", url).replace(/{{INDEX}}/g, i);
 		questionsHtml += questionHtml;
 	});
+
 	
 	var $resDiv = $("#questionList");
 	$resDiv.html(questionsHtml);
+
+	$(".location-questions").each(function(){
+	    $(this).hide();
+	});
+    
+	$("#q0").show();
+	$("#nextButton").show();
 
 	$("#submitButton").click(function (){
 		var questions = $(".location-questions");
@@ -104,6 +116,33 @@ function processLocationExport(fileContents){
 				yesCounter++;
 		});
 		alert("You remember " + yesCounter + " our of " + answers.length + " places");
+	});
+	$("#nextButton").click(function (){
+		$("#submitButton").show();
+		$("#backButton").show();
+		if (imageIndex < imageCount -1 ){
+			$("#q" + imageIndex).hide();
+            imageIndex++;
+        }
+        if (imageIndex == imageCount -1 ){
+            $("#nextButton").hide();
+        }
+        $("#q" + imageIndex).show();
+        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + imageCount);
+	});
+	$("#backButton").click(function (){
+		$("#nextButton").show();
+		$("#submitButton").show();
+		if (imageIndex > 0){
+		    imageIndex--;
+		}
+		if (imageIndex == 0){
+            $("#backButton").hide();
+		}
+		$("#q" + (imageIndex + 1)).hide();
+		$("#q" + imageIndex).show();
+        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + imageCount);
+
 	});
 }
 

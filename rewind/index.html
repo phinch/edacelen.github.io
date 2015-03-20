@@ -18,6 +18,9 @@
 
 $(function () {
     function createHyperlapse(locations) {
+    	var panoWidth = 1200;
+    	var panoHeight = 600;
+
 		$("#pano").html("");
 	
 		if (locations.length < 2) {
@@ -33,8 +36,8 @@ $(function () {
 			zoom: 2,
 			use_lookat: false,
 			elevation: 50,
-			width: 1200,
-			height: 600,
+			width: panoWidth,
+			height: panoHeight,
 			millis: 1000/24,
 			distance_between_points: 3,
 			max_points: 50
@@ -59,6 +62,15 @@ $(function () {
 				var sliderPos = parseInt($("#slider").val());
 				//console.log(sliderPos);
 				hyperlapse.setPosition(sliderPos);
+			});
+			//when cursor is on rewind video
+			$("#pano").on( "mousemove", function(event){
+				var mouseX = parseInt(event.pageX - parseInt($('#pano').offset().left));
+                var mouseY = parseInt(event.pageY - parseInt($('#pano').offset().top));
+                console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
+                var imagePos = parseInt(mouseX * (hyperlapse.getPositionCount()-1) / panoWidth);
+				console.log(imagePos);
+				hyperlapse.setPosition(imagePos);
 			});
 		};
 		
