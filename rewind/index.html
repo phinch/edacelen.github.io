@@ -13,15 +13,66 @@
     
     <script src="js/jquery-ui-1.11.3/jquery-ui.min.js"></script>
 	<script src="js/moment-with-locales.min.js"></script>
+
+<style type="text/css">
+.location-questions > .image-pano {
+	float: left;
+}
+
+.location-questions img.location {
+	cursor: pointer;
+}
+
+.location-questions > ol {
+	float: left;
+}
+
+.location-questions li {
+	margin-bottom: 20px;
+}
+
+.location-questions li input[type=radio] {
+	margin-left: 20px;
+}
+
+div.hyperlapse canvas {
+	display: none;
+}
+
+#button-box {
+	position: relative;
+	margin-left: 620px;
+	margin-top: -320px;	
+}
+
+#button-box button {
+	position: absolute;
+	padding: 5px 10px;
+}
+
+#nextButton {
+	left: 190px;
+}
+
+#backButton {
+	left: 0px;
+}
+
+#submitButton {
+	left: 90px;
+}
+
+</style>
+
 	<script>
         
 
 $(function () {
     function createHyperlapse(locations, pano) {
-    	var panoWidth = 1200;
+    	var panoWidth = 600;
     	var panoHeight = 600;
 
-		$(pano).html("");
+		$(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
 	
 		if (locations.length < 2) {
 			alert("too few location points (count: "+locations.length+") for the day");
@@ -38,9 +89,9 @@ $(function () {
 			elevation: 50,
 			width: panoWidth,
 			height: panoHeight,
-			millis: 1000/24,
+			millis: 1000/15,
 			distance_between_points: 1,
-			max_points: 500
+			max_points: 40
 		});
 
 		hyperlapse.onError = function(e) {
@@ -52,22 +103,25 @@ $(function () {
 		};
 
 		hyperlapse.onLoadComplete = function(e) {
+			$(pano).find("img").hide();
+			$(pano).find("canvas").show();
+
 			hyperlapse.play(); //adding slider instead.
-			$("#slider").attr("min", 0);
-			$("#slider").attr("max", hyperlapse.getPositionCount()-1);
-			$("#slider").val(0);
-			$("#slider").show();
-			//hyperlapse.setPosition(0);
-			$("#slider").on("input", function(){
-				var sliderPos = parseInt($("#slider").val());
-				//console.log(sliderPos);
-				hyperlapse.setPosition(sliderPos);
-			});
+			// $("#slider").attr("min", 0);
+			// $("#slider").attr("max", hyperlapse.getPositionCount()-1);
+			// $("#slider").val(0);
+			// $("#slider").show();
+			// //hyperlapse.setPosition(0);
+			// $("#slider").on("input", function(){
+			// 	var sliderPos = parseInt($("#slider").val());
+			// 	//console.log(sliderPos);
+			// 	hyperlapse.setPosition(sliderPos);
+			// });
 			//when cursor is on rewind video
-			$(pano).on( "mousemove", function(event){
+			$(pano).on("mousemove", function(event){
 				var mouseX = parseInt(event.pageX - parseInt($(pano).offset().left));
                 var mouseY = parseInt(event.pageY - parseInt($(pano).offset().top));
-                console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
+                // console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
                 var imagePos = parseInt(mouseX * (hyperlapse.getPositionCount()-1) / panoWidth);
 				console.log(imagePos);
 				hyperlapse.setPosition(imagePos);
@@ -82,8 +136,8 @@ $(function () {
 
 		var route = {
 			request:{
-				origin: googleLatLng(first),//(37.816480000000006,-122.47825,37),
-				destination: googleLatLng(last),//(37.81195,-122.47773000000001),
+				origin: googleLatLng(first),
+				destination: googleLatLng(last),
 				waypoints: _(locations).map(function(location) { 
 					return {
 						location: googleLatLng(location)
@@ -126,6 +180,8 @@ $(function () {
 	var fileInput = document.getElementById('fileInput');
 
 	fileInput.addEventListener('change', function(e) {
+		$("#page-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
+
 		var file = fileInput.files[0];
 
 		var reader = new FileReader();
@@ -158,6 +214,9 @@ $(function () {
 
 	function processLocationExport(fileContents){
 		locationsByDate = parseLocationJson(fileContents);
+
+		$("#page-wrapper").hide();
+
 		var imageIndex = 0;
 		var imageCount = 10;
 		var locations = getRandomLocations(locationsByDate, imageCount);
@@ -172,7 +231,10 @@ $(function () {
 
 		var questionHtmlTpl = "" +
 			"<div class='location-questions' id='q{{INDEX}}'>" +
-				"<div class='image-pano'><img src='{{SRC}}' data-date='{{DATE}}'></img></div>" +
+				"<div class='image-pano' style='position:relative'>"+
+					"<img class='location' src='{{SRC}}' data-date='{{DATE}}' style='width:600px; height:600px;'></img>"+
+					"<div class='hyperlapse' style='display:none'></div>"+
+				"</div>" +
 				"<ol>" +
 					"<li class='question'>" +
 						"<div class='qtext'> Do you remember this place?</div>" +
@@ -203,6 +265,7 @@ $(function () {
 						"</div>" +
 					"</li>" +
 				"</ol>" +
+				"<div style='clear: both;''></div>"+
 			"</div>";
 
 		
@@ -221,9 +284,20 @@ $(function () {
 		$resDiv.html(questionsHtml);
 
 		$(".image-pano > img").click(function () {
-			//alert($(this).attr("data-date"));
 			var locations = getLocationsOnDate($(this).attr("data-date"));
-			createHyperlapse(locations, this.parentNode);
+
+			var $pano = $(this).hide();
+			var $pano = $(this).next(".hyperlapse").show();
+
+			createHyperlapse(locations, $(this).next(".hyperlapse")[0]);
+		});
+
+		$(".image-pano > img").on("mouseover", function () {
+			$(this.parentNode).append("<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>");
+		});
+
+		$(".image-pano > img").on("mouseout", function () {
+			$(this.parentNode).find("img.play-icon").remove();
 		});
 
 		$(".location-questions > ol > li:first-child input").change(function () {
@@ -267,19 +341,25 @@ $(function () {
 			alert("You remember " + yesCounter + " our of " + answers.length + " places");
 		});
 		$("#nextButton").click(function (){
+			$("div.hyperlapse").hide().find("*").remove();
+			$("img.location").show();
+
+
 			$("#submitButton").show();
 			$("#backButton").show();
-			if (imageIndex < imageCount -1 ){
+			if (imageIndex < urls.length -1 ){
 				$("#q" + imageIndex).hide();
 	            imageIndex++;
 	        }
-	        if (imageIndex == imageCount -1 ){
+	        if (imageIndex == urls.length -1 ){
 	            $("#nextButton").hide();
 	        }
 	        $("#q" + imageIndex).show();
-	        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + imageCount);
+	        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 		});
 		$("#backButton").click(function (){
+			$("div.hyperlapse > *").remove();
+
 			$("#nextButton").show();
 			$("#submitButton").show();
 			if (imageIndex > 0){
@@ -290,7 +370,7 @@ $(function () {
 			}
 			$("#q" + (imageIndex + 1)).hide();
 			$("#q" + imageIndex).show();
-	        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + imageCount);
+	        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
 		});
 	}
@@ -398,22 +478,17 @@ $(function () {
 	</script>
 </head> 
 <body>
-	<h1>How much do you remember?</h1> 
-	<div id="page-wrapper">
-		Select a json file: 
-		<input type="file" id="fileInput">
+	<div id="page-wrapper" style="text-align:center">
+		<h1>How much do you remember?</h1> 
+		Select a json file: <input type="file" id="fileInput">
 	</div>
-	<br>
 	<div>
-		<br>
-		<div id="loadProg"></div>
-		<div id="parseProg"></div>
-		<br>
-		<h3></h3>
 		<div id="questionList"></div>
-		<button id="backButton" style="display:none">Back</button>
-		<button id="nextButton" style="display:none">Next</button>
-		<button id="submitButton" style="display:none">Submit</button>
+		<div id="button-box">
+			<button id="backButton" style="display:none">Back</button>
+			<button id="nextButton" style="display:none">Next</button>
+			<button id="submitButton" style="display:none">Submit</button>
+		</div>
 	</div>
     <div id="pano"></div>
 </body> 
