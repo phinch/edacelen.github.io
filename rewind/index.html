@@ -3,6 +3,7 @@
 <head> 
 	<title>A trip down the memory lane...</title> 
     <link rel="stylesheet" href="js/jquery-ui-1.11.3/jquery-ui.css" />
+    <link href='http://fonts.googleapis.com/css?family=Merriweather:400,300,700&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
 	
 	<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false" type="text/javascript"></script> 
 	<script src="js/three.min.js"></script>
@@ -15,8 +16,36 @@
 	<script src="js/moment-with-locales.min.js"></script>
 
 <style type="text/css">
+body {
+	margin: 0;
+	padding: 0;
+	background-color: #fbfbfb;
+	overflow: hidden;
+	font-family: "Merriweather", serif; 
+	font-weight: 400;
+	color: #666;
+}
+
+#survey-wrapper {
+	position: relative;
+	width: 100%;
+	padding: 20px 0px;
+	height: 450px;
+	background-color: #fff;
+	margin-top: 100px;
+	box-shadow: 0 0 20px rgba(0,0,0,.2);
+}
+
+#question-list {
+	width: 900px;
+	margin: 0 auto;
+}
+
 .location-questions > .image-pano {
 	float: left;
+	margin-top: -75px;
+	box-shadow: 0 5px 10px rgba(0,0,0,.3);
+	height: 600px;
 }
 
 .location-questions img.location {
@@ -24,7 +53,8 @@
 }
 
 .location-questions > ol {
-	float: left;
+	float: left;	
+	font-size: 15px;
 }
 
 .location-questions li {
@@ -35,31 +65,45 @@
 	margin-left: 20px;
 }
 
+.location-questions li .qtext {
+	margin-bottom: 10px;
+}
+
+div.hyperlapse {
+	background-color: #fbfbfb;
+}
+
 div.hyperlapse canvas {
 	display: none;
 }
 
 #button-box {
 	position: relative;
-	margin-left: 620px;
-	margin-top: -320px;	
+	margin: 0 auto;
+	width: 300px;
+	margin-top: -280px;
+	padding-left: 650px
 }
 
 #button-box button {
-	position: absolute;
-	padding: 5px 10px;
+	padding: 8px 16px;
+	margin-right: 40px;
+	border: none;
+	border-width: 1px;
+	border-color: #ccc;
+	border-style: double;
+	border-radius: 4px;
+	background-color: #009aff;
+	color: white;
 }
 
-#nextButton {
-	left: 190px;
+#button-box button:last-of-type {
+	margin-right: 0px;
 }
 
-#backButton {
-	left: 0px;
-}
-
-#submitButton {
-	left: 90px;
+#button-box button:nth-child(2) {
+	background-color: white;
+	color: #009aff;
 }
 
 </style>
@@ -180,7 +224,7 @@ $(function () {
 	var fileInput = document.getElementById('fileInput');
 
 	fileInput.addEventListener('change', function(e) {
-		$("#page-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
+		$("#upload-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
 
 		var file = fileInput.files[0];
 
@@ -215,7 +259,7 @@ $(function () {
 	function processLocationExport(fileContents){
 		locationsByDate = parseLocationJson(fileContents);
 
-		$("#page-wrapper").hide();
+		$("#upload-wrapper").hide();
 
 		var imageIndex = 0;
 		var imageCount = 10;
@@ -239,29 +283,29 @@ $(function () {
 					"<li class='question'>" +
 						"<div class='qtext'> Do you remember this place?</div>" +
 						"<div class='qanswers'>" +
-							"<input type='radio' name='q{{INDEX}}ans1' value='true'></input> Yes" +
-							"<input type='radio' name='q{{INDEX}}ans1' value='false'></input> No" +
+							"<input type='radio' name='q{{INDEX}}ans1' value='true'></input><span class='ans-label'> Yes</span>" +
+							"<input type='radio' name='q{{INDEX}}ans1' value='false'></input><span class='ans-label'> No</span>" +
 						"</div>" +
 					"</li>" +
 					// "<li class='question'>" +
 					// 	"<div class='qtext'> Is this an important place to you?</div>" +
 					// 	"<div class='qanswers'>" +
-					// 		"<input type='radio' name='q{{INDEX}}ans2' value='true'></input> Yes" +
-					// 		"<input type='radio' name='q{{INDEX}}ans2' value='false'></input> No" +
+					// 		"<input type='radio' name='q{{INDEX}}ans2' value='true'></input><span class='ans-label'> Yes</span>" +
+					// 		"<input type='radio' name='q{{INDEX}}ans2' value='false'></input><span class='ans-label'> No</span>" +
 					// 	"</div>" +
 					// "</li>" +
 					"<li class='question'>" +
 						"<div class='qtext'> Do you want to keep this picture?</div>" +
 						"<div class='qanswers'>" +
-							"<input type='radio' name='q{{INDEX}}ans3' value='true'></input> Yes" +
-							"<input type='radio' name='q{{INDEX}}ans3' value='false'></input> No" +
+							"<input type='radio' name='q{{INDEX}}ans3' value='true'></input><span class='ans-label'> Yes</span>" +
+							"<input type='radio' name='q{{INDEX}}ans3' value='false'></input><span class='ans-label'> No</span>" +
 						"</div>" +
 					"</li>" +
 					"<li class='question' style='display:none'>" +
 						"<div class='qtext'> Were you traveling alone?</div>" +
 						"<div class='qanswers'>" +
-							"<input type='radio' name='q{{INDEX}}ans4' value='true'></input> Yes" +
-							"<input type='radio' name='q{{INDEX}}ans4' value='false'></input> No" +
+							"<input type='radio' name='q{{INDEX}}ans4' value='true'></input><span class='ans-label'> Yes</span>" +
+							"<input type='radio' name='q{{INDEX}}ans4' value='false'></input><span class='ans-label'> No</span>" +
 						"</div>" +
 					"</li>" +
 				"</ol>" +
@@ -280,7 +324,7 @@ $(function () {
 		});
 
 		
-		var $resDiv = $("#questionList");
+		var $resDiv = $("#question-list");
 		$resDiv.html(questionsHtml);
 
 		$(".image-pano > img").click(function () {
@@ -303,6 +347,14 @@ $(function () {
 		$(".location-questions > ol > li:first-child input").change(function () {
 			if (this.value == "true") {
 				$(this.parentNode.parentNode.parentNode).find("li").show();
+			}
+		});
+
+		$(".location-questions > ol > li input").change(function () {
+			$(this.parentNode).find("span.ans-label").css({color: ""});
+
+			if (this.checked == true) {
+				$(this).next().css({fontWeight: "bold", color: "#7acaff"});
 			}
 		});
 
@@ -478,18 +530,23 @@ $(function () {
 	</script>
 </head> 
 <body>
-	<div id="page-wrapper" style="text-align:center; margin-top: 200px;">
-		<h1>How much do you remember?</h1> 
-		Select a json file: <input type="file" id="fileInput">
-	</div>
-	<div>
-		<div id="questionList"></div>
+	<div id="survey-wrapper">
+		<div id="upload-wrapper" style="text-align:center;">
+			<h1 style="color: #008fed">How much do you remember?</h1> 
+			Select a json file: <input type="file" id="fileInput">
+		</div>
+
+		<div id="question-list"></div>
 		<div id="button-box">
 			<button id="backButton" style="display:none">Back</button>
-			<button id="nextButton" style="display:none">Next</button>
 			<button id="submitButton" style="display:none">Submit</button>
+			<button id="nextButton" style="display:none">Next</button>
+			<div style="clear:both"></div>
 		</div>
+
+		
+		<div style="clear:both"></div>
 	</div>
-    <div id="pano"></div>
+    <div style="clear:both"></div>
 </body> 
 </html>
