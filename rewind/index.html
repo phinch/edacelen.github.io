@@ -10,6 +10,7 @@
 	<script src="js/GSVPano.js"></script>
 	<script src="js/Hyperlapse.js"></script>
     <script src="js/jquery.js"></script>
+    <script src="js/jquery-visibility.js"></script>
 	<script src="js/underscore.js"></script>
     
     <script src="js/jquery-ui-1.11.3/jquery-ui.min.js"></script>
@@ -121,9 +122,6 @@ $(function () {
 		if (locations.length < 2) {
 			alert("too few location points (count: "+locations.length+") for the day");
 			return;
-		} else if (locations.length > 10) {
-			// alert("too many location points (count: "+locations.length+") for the day. only showing first 10");
-			locations = locations.slice(0, 10);
 		}
 		
 		var hyperlapse = new Hyperlapse(pano, {
@@ -161,7 +159,7 @@ $(function () {
 			// 	//console.log(sliderPos);
 			// 	hyperlapse.setPosition(sliderPos);
 			// });
-			//when cursor is on rewind video
+			//when cursor is on rew\ind video
 			$(pano).on("mousemove", function(event){
 				var mouseX = parseInt(event.pageX - parseInt($(pano).offset().left));
                 var mouseY = parseInt(event.pageY - parseInt($(pano).offset().top));
@@ -171,7 +169,41 @@ $(function () {
 				hyperlapse.setPosition(imagePos);
 			});
 		};
-		
+
+		var routes = sliceLocationsToRoutes(locations);
+		var gResults = [];
+
+		for (var i = 0; i < routes.length; i++) {
+			getGoogleRoute(routes, gResults, i, function() {
+				hyperlapse.generate({route: mergeGoogleResponses(gResults)});
+			});
+		}
+
+	}
+
+	function mergeGoogleResponses(googleResponses) {
+		var firstResponse = googleResponses.shift();
+
+		var newPath = firstResponse.routes[0].overview_path;
+		var newLegs = firstResponse.routes[0].legs;
+
+		_.each(googleResponses, function(resp){
+			var path = resp.routes[0].overview_path;
+			var legs = resp.routes[0].legs;
+
+			newPath = newPath.concat(path);
+			newLegs = newLegs.concat(legs);
+		});
+
+		firstResponse.routes[0].overview_path = newPath;
+		firstResponse.routes[0].legs = newLegs;
+
+		return firstResponse;
+	}
+
+	function getGoogleRoute(routes, results, i, onFinished) {
+		var locations = routes[i];
+
 		var first = locations.shift()
 		var last = locations.pop()
 		
@@ -193,11 +225,35 @@ $(function () {
 
 		directions_service.route(route.request, function(response, status) {
 			if (status == google.maps.DirectionsStatus.OK) {
-				hyperlapse.generate( {route:response} );
+				//hyperlapse.generate( {route:response} );
+				results[i] = response;
+
+				if (_.compact(results).length == routes.length) {
+					onFinished();
+				}
 			} else {
 				console.log(status);
 			}
 		});
+	}
+
+	function sliceLocationsToRoutes(locations) {
+		var routeMax = 10;
+		var locs = [];
+		var routes = [];
+
+		while (locations.length > 0) {
+		    var loc = locations.shift();
+		    locs.push(loc);
+
+		    if (locs.length == routeMax || locations.length == 0) {
+            	routes.push(locs);
+            	locs = [loc];
+		    }
+		}
+
+		return routes;
+
 	}
 	
 	function googleLatLng(location) {
@@ -363,7 +419,7 @@ $(function () {
 		});
 	    
 		$("#q0").show();
-		$("#nextButton").show();
+		$("#nextButton").visible();
 
 		$("#submitButton").click(function () {
 			var questions = $(".location-questions");
@@ -397,14 +453,14 @@ $(function () {
 			$("img.location").show();
 
 
-			$("#submitButton").show();
-			$("#backButton").show();
+			$("#submitButton").visible();
+			$("#backButton").visible();
 			if (imageIndex < urls.length -1 ){
 				$("#q" + imageIndex).hide();
 	            imageIndex++;
 	        }
 	        if (imageIndex == urls.length -1 ){
-	            $("#nextButton").hide();
+	            $("#nextButton").invisible();
 	        }
 	        $("#q" + imageIndex).show();
 	        console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
@@ -412,13 +468,13 @@ $(function () {
 		$("#backButton").click(function (){
 			$("div.hyperlapse > *").remove();
 
-			$("#nextButton").show();
-			$("#submitButton").show();
+			$("#nextButton").visible();
+			$("#submitButton").visible();
 			if (imageIndex > 0){
 			    imageIndex--;
 			}
 			if (imageIndex == 0){
-	            $("#backButton").hide();
+	            $("#backButton").invisible();
 			}
 			$("#q" + (imageIndex + 1)).hide();
 			$("#q" + imageIndex).show();
@@ -538,9 +594,9 @@ $(function () {
 
 		<div id="question-list"></div>
 		<div id="button-box">
-			<button id="backButton" style="display:none">Back</button>
-			<button id="submitButton" style="display:none">Submit</button>
-			<button id="nextButton" style="display:none">Next</button>
+			<button id="backButton" style="visibility:hidden">Back</button>
+			<button id="submitButton" style="visibility:hidden">Submit</button>
+			<button id="nextButton" style="visibility:hidden">Next</button>
 			<div style="clear:both"></div>
 		</div>
 
