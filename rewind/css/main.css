@@ -1,0 +1,89 @@
+body {
+	margin: 0;
+	padding: 0;
+	background-color: #fbfbfb;
+	overflow: hidden;
+	font-family: "Merriweather", serif; 
+	font-weight: 400;
+	color: #666;
+}
+
+#survey-wrapper {
+	position: relative;
+	width: 100%;
+	padding: 20px 0px;
+	height: 450px;
+	background-color: #fff;
+	margin-top: 100px;
+	box-shadow: 0 0 20px rgba(0,0,0,.2);
+}
+
+#question-list {
+	width: 900px;
+	margin: 0 auto;
+}
+
+.location-questions > .image-pano {
+	float: left;
+	margin-top: -75px;
+	box-shadow: 0 5px 10px rgba(0,0,0,.3);
+	height: 600px;
+}
+
+.location-questions img.location {
+	cursor: pointer;
+}
+
+.location-questions > ol {
+	float: left;	
+	font-size: 15px;
+}
+
+.location-questions li {
+	margin-bottom: 20px;
+}
+
+.location-questions li input[type=radio] {
+	margin-left: 20px;
+}
+
+.location-questions li .qtext {
+	margin-bottom: 10px;
+}
+
+div.hyperlapse {
+	background-color: #fbfbfb;
+}
+
+div.hyperlapse canvas {
+	display: none;
+}
+
+#button-box {
+	position: relative;
+	margin: 0 auto;
+	width: 300px;
+	margin-top: -280px;
+	padding-left: 650px
+}
+
+#button-box button {
+	padding: 8px 16px;
+	margin-right: 40px;
+	border: none;
+	border-width: 1px;
+	border-color: #ccc;
+	border-style: double;
+	border-radius: 4px;
+	background-color: #009aff;
+	color: white;
+}
+
+#button-box button:last-of-type {
+	margin-right: 0px;
+}
+
+#button-box button:nth-child(2) {
+	background-color: white;
+	color: #009aff;
+}
