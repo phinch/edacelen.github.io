@@ -1,4 +1,25 @@
 $(function() {
+	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+
+	// For northern hemisphere only!
+	MONTH_SATURATION = {
+		"12": -40,
+		"01": -40,
+		"02": -40,
+
+		"03": 10,
+		"04": 10,
+		"05": 10,
+
+		"06": 40,
+		"07": 40,
+		"08": 40,
+
+		"09": -10,
+		"10": -10,
+		"11": -10,
+	};
+
     function createHyperlapse(locations, pano) {
         var panoWidth = 600;
         var panoHeight = 600;
@@ -203,6 +224,10 @@ $(function() {
         return randLocations;
     }
 
+    function getMonth(dateString) {
+    	return dateString.split("/")[0];
+    }
+
     function processLocationExport(fileContents) {
         locationsByDate = parseLocationJson(fileContents);
 
@@ -223,7 +248,7 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-            "<img class='location' src='{{SRC}}' data-date='{{DATE}}' style='width:600px; height:600px;'></img>" +
+            "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' style='width:600px; height:600px;'></img>" +
             "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
             "<ol>" +
@@ -261,7 +286,6 @@ $(function() {
 
 
         urls.forEach(function(url, i) {
-            //		questionsHtml += "<a href='"+url+"'>"+url+"</a><br/>";
             var questionHtml = questionHtmlTpl
                 .replace("{{SRC}}", url)
                 .replace(/{{INDEX}}/g, i)
@@ -273,6 +297,18 @@ $(function() {
 
         var $resDiv = $("#question-list");
         $resDiv.html(questionsHtml);
+
+        $(".image-pano > img").each(function() {
+        	var month = getMonth($(this).attr("data-date"));
+        	var saturation = MONTH_SATURATION[month];
+
+        	$(this).attr("data-saturation", saturation);
+        	
+        	Caman(this, function() {
+        		this.saturation(saturation);
+    			this.render();
+        	});
+        });
 
         $(".image-pano > img").click(function() {
             var locations = getLocationsOnDate($(this).attr("data-date"));
@@ -384,14 +420,14 @@ $(function() {
 
         var locations = locationsByDate[date];
         locations.sort(function(a, b) {
-            return a.milis - b.milis;
+            return a.millis - b.millis;
         });
 
         var uniqLocations = []
         var uniq = {}
 
         locations.forEach(function(location, i) {
-            var date = location.milis;
+            var date = location.millis;
             // always get up to the first 7 digits after decimal
             var lat = ("" + location.latitude).match(/^(.+\.\d{1,7})/)[1];
             var lon = ("" + location.longitude).match(/^(.+\.\d{1,7})/)[1];
@@ -472,7 +508,7 @@ $(function() {
             results[date].push({
                 latitude: lat,
                 longitude: lon,
-                milis: timeMs
+                millis: timeMs
             });
 
             //if (Math.random() > 0.99) 
