@@ -248,7 +248,7 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-            "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' style='width:600px; height:600px;'></img>" +
+            "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' style='width:600px; height:600px;'></img>" +
             "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
             "<ol>" +
@@ -289,7 +289,8 @@ $(function() {
             var questionHtml = questionHtmlTpl
                 .replace("{{SRC}}", url)
                 .replace(/{{INDEX}}/g, i)
-                .replace("{{DATE}}", locations[i].date);
+                .replace("{{DATE}}", locations[i].date)
+                .replace("{{MILLIS}}", locations[i].location.millis);
 
             questionsHtml += questionHtml;
         });
@@ -299,13 +300,19 @@ $(function() {
         $resDiv.html(questionsHtml);
 
         $(".image-pano > img").each(function() {
+        	var datetime = moment(parseInt($(this).attr("data-millis")));
+        	var hour = datetime.hour();
+        	var exposure = hour > 12 ? -60 : 40;
+
         	var month = getMonth($(this).attr("data-date"));
         	var saturation = MONTH_SATURATION[month];
 
         	$(this).attr("data-saturation", saturation);
+        	$(this).attr("data-exposure", exposure);
         	
         	Caman(this, function() {
         		this.saturation(saturation);
+        		this.exposure(exposure);
     			this.render();
         	});
         });
