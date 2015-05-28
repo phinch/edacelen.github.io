@@ -248,8 +248,9 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-            "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' style='width:600px; height:600px;'></img>" +
-            "<div class='hyperlapse' style='display:none'></div>" +
+                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' style='width:600px; height:600px;'></img>" +
+                "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>"+
+                "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
             "<ol>" +
             "<li class='question'>" +
@@ -299,7 +300,7 @@ $(function() {
         var $resDiv = $("#question-list");
         $resDiv.html(questionsHtml);
 
-        $(".image-pano > img").each(function() {
+        $(".image-pano > img.location").each(function() {
         	var datetime = moment(parseInt($(this).attr("data-millis")));
         	var hour = datetime.hour();
         	var exposure = hour > 12 ? -60 : 40;
@@ -317,22 +318,24 @@ $(function() {
         	});
         });
 
-        $(".image-pano > img").click(function() {
-            var locations = getLocationsOnDate($(this).attr("data-date"));
+        $(".image-pano").click(function() {
+            var $img = $(this).find(".location")
+            var locations = getLocationsOnDate($img.attr("data-date"));
 
-            var $pano = $(this).hide();
-            var $pano = $(this).next(".hyperlapse").show();
+            $img.hide();
+            $img.nextAll(".play-icon").hide();
+            $img.nextAll(".hyperlapse").show();
 
-            createHyperlapse(locations, $(this).next(".hyperlapse")[0]);
+            createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
         });
 
-        $(".image-pano > img").on("mouseover", function() {
-            $(this.parentNode).append("<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>");
-        });
+        // $(".image-pano > img").on("mouseover", function() {
+        //     $(this.parentNode).append("<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>");
+        // });
 
-        $(".image-pano > img").on("mouseout", function() {
-            $(this.parentNode).find("img.play-icon").remove();
-        });
+        // $(".image-pano > img").on("mouseout", function() {
+        //     $(this.parentNode).find("img.play-icon").remove();
+        // });
 
         $(".location-questions > ol > li:first-child input").change(function() {
             if (this.value == "true") {

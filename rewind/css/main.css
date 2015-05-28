@@ -30,8 +30,16 @@ body {
 	height: 600px;
 }
 
-.location-questions img.location {
+.image-pano {
 	cursor: pointer;
+}
+
+.image-pano img.play-icon {
+	display: none;
+}
+
+.image-pano:hover img.play-icon {
+	display: block;
 }
 
 .location-questions > ol {
