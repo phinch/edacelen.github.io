@@ -169,6 +169,40 @@ $(function() {
         return new google.maps.LatLng(location.latitude, location.longitude);
     }
 
+    // inspired from StackOverflow: http://stackoverflow.com/a/13763063/1246009
+    function getImageLightness(image) {
+        // create canvas
+        var canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+        var colorSum = 0, saturSum = 0;
+
+        for (var x = 0, len = data.length; x < len; x += 4) {
+            var r = data[x] / 256;
+            var g = data[x + 1] / 256;
+            var b = data[x + 2] / 256;
+
+            colorSum += (r + g + b) / 3;
+
+            var cmin = Math.min(r, g, b);
+            var cmax = Math.max(r, g, b);
+            var cdelta = cmax - cmin;
+
+            saturSum += (cmax != 0 ? cdelta / cmax : 0);
+        }
+
+        var brightness = colorSum / (image.width * image.height);
+        var saturation = saturSum / (image.width * image.height);
+        return [brightness, saturation];
+    }
+
+
     // $( "#datePicker" ).datepicker({
     // 	onSelect: function(dateText, inst) { 
     // 		var dateAsString = dateText; //the first parameter of this function
@@ -303,19 +337,50 @@ $(function() {
         $(".image-pano > img.location").each(function() {
         	var datetime = moment(parseInt($(this).attr("data-millis")));
         	var hour = datetime.hour();
-        	var exposure = hour > 12 ? -60 : 40;
+        	// var exposure = hour > 12 ? -60 : 40;
 
         	var month = getMonth($(this).attr("data-date"));
-        	var saturation = MONTH_SATURATION[month];
-
-        	$(this).attr("data-saturation", saturation);
-        	$(this).attr("data-exposure", exposure);
+        	// var saturation = MONTH_SATURATION[month];
         	
-        	Caman(this, function() {
-        		this.saturation(saturation);
-        		this.exposure(exposure);
-    			this.render();
-        	});
+            var that = this;
+            this.onload = function() {
+                var res = getImageLightness(that);
+                var avgBrightness = res[0];
+                var avgSaturation = res[1];
+
+                var saturation = 0;
+                var exposure = 0;
+
+                if (hour > 12 && avgBrightness > 0.5) {
+                    exposure = -60;
+                } else if (hour < 12 && avgBrightness <= 0.5) {
+                    exposure = 40;
+                }
+
+                if (_.contains(["12", "01", "02"], month) && avgSaturation > 0.10) {
+                    saturation = -40;
+                } else if (_.contains(["03", "04", "05"], month) && avgSaturation > 0.30) {
+                    saturation = -20;
+                } else if (_.contains(["03", "04", "05"], month) && avgSaturation < 0.20) {
+                    saturation = 20;
+                } else if (_.contains(["06", "07", "08"], month) && avgSaturation < 0.30) {
+                    saturation = 40;
+                } else if (_.contains(["09", "10", "11"], month) && avgSaturation > 0.20) {
+                    saturation = -20;
+                } else if (_.contains(["09", "10", "11"], month) && avgSaturation < 0.10) {
+                    saturation = 20;
+                }
+
+                // log data on image attributes
+                $(that).attr("data-saturation", saturation);
+                $(that).attr("data-exposure", exposure);
+
+                Caman(that, function() {
+                    this.saturation(saturation);
+                    this.exposure(exposure);
+                    this.render();
+                });
+            }
         });
 
         $(".image-pano").click(function() {
