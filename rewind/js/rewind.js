@@ -236,7 +236,108 @@ $(function() {
         });
     });
 
+    function isWinter(month, lat) {
+        var absLat = Math.abs(parseInt(lat));
+
+        return (_.contains(["12", "01", "02"], month) || absLat > 60) && absLat > 15;
+    }
+
+    function isSummer(month, lat) {
+        var absLat = Math.abs(parseInt(lat));
+
+        return (_.contains(["06", "07", "08"], month) || absLat < 15) && absLat < 60;
+    }
+
+    function isSpring(month, lat) {
+        var absLat = Math.abs(parseInt(lat));
+
+        return _.contains(["03", "04", "05"], month);
+    }
+
+    function isFall(month, lat) {
+        var absLat = Math.abs(parseInt(lat));
+
+        return _.contains(["09", "10", "11"], month);
+    }
+
     var locationsByDate = null;
+
+    var timeZoneUrlTpl = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+
+    function manipulateImage() {
+        var millis = $(this).attr("data-millis");
+        var lat = $(this).attr("data-lat");
+        var lon = $(this).attr("data-lon")
+
+        var datetime = moment(parseInt(millis));
+        var hour = datetime.utc().hour();
+        var timeZoneUrl = timeZoneUrlTpl
+                .replace("{{LAT}}", lat)
+                .replace("{{LON}}", lon)
+                .replace("{{MILLIS}}", millis.replace(/\d\d\d$/,""));
+
+        // var exposure = hour > 12 ? -60 : 40;
+
+        var month = getMonth($(this).attr("data-date"));
+        // var saturation = MONTH_SATURATION[month];
+        
+        var that = this;
+        this.onload = function() {
+            $.getJSON(timeZoneUrl, function(data) {
+                var hourOffset = data.rawOffset / 60 / 60;
+                var localHour = ( hour + hourOffset + 24 ) % 24;
+
+
+
+                var res = getImageLightness(that);
+                var avgBrightness = res[0];
+                var avgSaturation = res[1];
+
+                var saturation = 0;
+                var exposure = 0;
+
+                if (localHour > 16 && localHour <= 19 && avgBrightness > 0.5) {
+                    exposure = -20;
+                } else if ((localHour > 19 || localHour <= 6) && avgBrightness > 0.3) {
+                    exposure = -40;
+                } else if (localHour > 6 && localHour <= 12 && avgBrightness <= 0.5) {
+                    exposure = 40;
+                } else if (localHour > 12 && localHour <= 16 && avgBrightness <= 0.3) {
+                    exposure = 20;
+                }
+
+                if (isWinter(month, lat) && avgSaturation > 0.10) {
+                    saturation = -40;
+                } else if (isSpring(month, lat) && avgSaturation > 0.30) {
+                    saturation = -20;
+                } else if (isSpring(month, lat) && avgSaturation < 0.20) {
+                    saturation = 20;
+                } else if (isSummer(month, lat) && avgSaturation < 0.30) {
+                    saturation = 40;
+                } else if (isFall(month, lat) && avgSaturation > 0.20) {
+                    saturation = -20;
+                } else if (isFall(month, lat) && avgSaturation < 0.10) {
+                    saturation = 20;
+                }
+
+                if (parseInt(lat) < 0) {
+                    saturation *= -1
+                }
+
+                // log data on image attributes
+                $(that).attr("data-saturation", saturation);
+                $(that).attr("data-exposure", exposure);
+                $(that).attr("data-hour", hour);
+                $(that).attr("data-localHour", localHour);
+
+                Caman(that, function() {
+                    this.saturation(saturation);
+                    this.exposure(exposure);
+                    this.render();
+                });
+            });
+        }
+    }
 
     function getRandomLocations(locationsByDate, count) {
         var randLocations = [];
@@ -282,7 +383,7 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' style='width:600px; height:600px;'></img>" +
+                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:600px; height:600px;'></img>" +
                 "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
@@ -325,6 +426,8 @@ $(function() {
                 .replace("{{SRC}}", url)
                 .replace(/{{INDEX}}/g, i)
                 .replace("{{DATE}}", locations[i].date)
+                .replace("{{LAT}}", locations[i].location.latitude)
+                .replace("{{LON}}", locations[i].location.longitude)
                 .replace("{{MILLIS}}", locations[i].location.millis);
 
             questionsHtml += questionHtml;
@@ -334,54 +437,7 @@ $(function() {
         var $resDiv = $("#question-list");
         $resDiv.html(questionsHtml);
 
-        $(".image-pano > img.location").each(function() {
-        	var datetime = moment(parseInt($(this).attr("data-millis")));
-        	var hour = datetime.hour();
-        	// var exposure = hour > 12 ? -60 : 40;
-
-        	var month = getMonth($(this).attr("data-date"));
-        	// var saturation = MONTH_SATURATION[month];
-        	
-            var that = this;
-            this.onload = function() {
-                var res = getImageLightness(that);
-                var avgBrightness = res[0];
-                var avgSaturation = res[1];
-
-                var saturation = 0;
-                var exposure = 0;
-
-                if (hour > 12 && avgBrightness > 0.5) {
-                    exposure = -60;
-                } else if (hour < 12 && avgBrightness <= 0.5) {
-                    exposure = 40;
-                }
-
-                if (_.contains(["12", "01", "02"], month) && avgSaturation > 0.10) {
-                    saturation = -40;
-                } else if (_.contains(["03", "04", "05"], month) && avgSaturation > 0.30) {
-                    saturation = -20;
-                } else if (_.contains(["03", "04", "05"], month) && avgSaturation < 0.20) {
-                    saturation = 20;
-                } else if (_.contains(["06", "07", "08"], month) && avgSaturation < 0.30) {
-                    saturation = 40;
-                } else if (_.contains(["09", "10", "11"], month) && avgSaturation > 0.20) {
-                    saturation = -20;
-                } else if (_.contains(["09", "10", "11"], month) && avgSaturation < 0.10) {
-                    saturation = 20;
-                }
-
-                // log data on image attributes
-                $(that).attr("data-saturation", saturation);
-                $(that).attr("data-exposure", exposure);
-
-                Caman(that, function() {
-                    this.saturation(saturation);
-                    this.exposure(exposure);
-                    this.render();
-                });
-            }
-        });
+        $(".image-pano > img.location").each(manipulateImage);
 
         $(".image-pano").click(function() {
             var $img = $(this).find(".location")
