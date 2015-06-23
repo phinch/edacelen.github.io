@@ -202,39 +202,30 @@ $(function() {
         return [brightness, saturation];
     }
 
-
-    // $( "#datePicker" ).datepicker({
-    // 	onSelect: function(dateText, inst) { 
-    // 		var dateAsString = dateText; //the first parameter of this function
-    // 		var dateAsObject = $(this).datepicker( 'getDate' ); //the getDate method
-    // 		$( "#date" ).text(dateAsString);
-    // 		var locations = getLocationsOnDate(dateAsString);
-    // 		createHyperlapse(locations);
-    // 	},
-
-    // 	beforeShowDay: function(date) {
-    // 		console.log(date);
-    // 		var formattedDate = moment(date).format("MM/DD/YYYY");
-    // 		var enabled = locationsByDate[formattedDate] ? true : false;
-    // 		return [enabled, "", ""];
-    // 	}
-    // });
+    var dragArea = document.getElementById('file-drop-area');
+    dragArea.ondragover = function () { this.className = 'dragging'; return false; };
+    dragArea.ondragend = dragArea.ondragleave = function () { this.className = ''; return false; };
+    dragArea.ondrop = function (e) {
+        this.className = '';
+        e.preventDefault();
+        handleUploadedFile(e.dataTransfer.files[0]);
+    }
 
     var fileInput = document.getElementById('fileInput');
-
     fileInput.addEventListener('change', function(e) {
-        $("#upload-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
+        handleUploadedFile(fileInput.files[0]);
+    });
 
-        var file = fileInput.files[0];
+    function handleUploadedFile(file) {
+        $("#upload-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
 
         var reader = new FileReader();
 
         reader.readAsText(file);
-
         reader.addEventListener('load', function(e) {
             processLocationExport(reader.result);
         });
-    });
+    }
 
     function isWinter(month, lat) {
         var absLat = Math.abs(parseInt(lat));
@@ -264,11 +255,7 @@ $(function() {
 
     var timeZoneUrlTpl = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
-    function manipulateImage() {
-        var millis = $(this).attr("data-millis");
-        var lat = $(this).attr("data-lat");
-        var lon = $(this).attr("data-lon")
-
+    function manipulateImage(image, millis, lat, lon, callback) {
         var datetime = moment(parseInt(millis));
         var hour = datetime.utc().hour();
         var timeZoneUrl = timeZoneUrlTpl
@@ -278,65 +265,64 @@ $(function() {
 
         // var exposure = hour > 12 ? -60 : 40;
 
-        var month = getMonth($(this).attr("data-date"));
+        var month = getMonth(datetime.format("MM/DD/YYYY"));
         // var saturation = MONTH_SATURATION[month];
         
-        var that = this;
-        this.onload = function() {
-            $.getJSON(timeZoneUrl, function(data) {
-                var hourOffset = data.rawOffset / 60 / 60;
-                var localHour = ( hour + hourOffset + 24 ) % 24;
+        $.getJSON(timeZoneUrl, function(data) {
+            var hourOffset = data.rawOffset / 60 / 60;
+            var localHour = ( hour + hourOffset + 24 ) % 24;
 
 
 
-                var res = getImageLightness(that);
-                var avgBrightness = res[0];
-                var avgSaturation = res[1];
+            var res = getImageLightness(image);
+            var avgBrightness = res[0];
+            var avgSaturation = res[1];
 
-                var saturation = 0;
-                var exposure = 0;
+            var saturation = 0;
+            var exposure = 0;
 
-                if (localHour > 16 && localHour <= 19 && avgBrightness > 0.5) {
-                    exposure = -20;
-                } else if ((localHour > 19 || localHour <= 6) && avgBrightness > 0.3) {
-                    exposure = -40;
-                } else if (localHour > 6 && localHour <= 12 && avgBrightness <= 0.5) {
-                    exposure = 40;
-                } else if (localHour > 12 && localHour <= 16 && avgBrightness <= 0.3) {
-                    exposure = 20;
-                }
+            if (localHour > 16 && localHour <= 19 && avgBrightness > 0.5) {
+                exposure = -20;
+            } else if ((localHour > 19 || localHour <= 6) && avgBrightness > 0.3) {
+                exposure = -40;
+            } else if (localHour > 6 && localHour <= 12 && avgBrightness <= 0.5) {
+                exposure = 40;
+            } else if (localHour > 12 && localHour <= 16 && avgBrightness <= 0.3) {
+                exposure = 20;
+            }
 
-                if (isWinter(month, lat) && avgSaturation > 0.10) {
-                    saturation = -40;
-                } else if (isSpring(month, lat) && avgSaturation > 0.30) {
-                    saturation = -20;
-                } else if (isSpring(month, lat) && avgSaturation < 0.20) {
-                    saturation = 20;
-                } else if (isSummer(month, lat) && avgSaturation < 0.30) {
-                    saturation = 40;
-                } else if (isFall(month, lat) && avgSaturation > 0.20) {
-                    saturation = -20;
-                } else if (isFall(month, lat) && avgSaturation < 0.10) {
-                    saturation = 20;
-                }
+            if (isWinter(month, lat) && avgSaturation > 0.10) {
+                saturation = -40;
+            } else if (isSpring(month, lat) && avgSaturation > 0.30) {
+                saturation = -20;
+            } else if (isSpring(month, lat) && avgSaturation < 0.20) {
+                saturation = 20;
+            } else if (isSummer(month, lat) && avgSaturation < 0.30) {
+                saturation = 40;
+            } else if (isFall(month, lat) && avgSaturation > 0.20) {
+                saturation = -20;
+            } else if (isFall(month, lat) && avgSaturation < 0.10) {
+                saturation = 20;
+            }
 
-                if (parseInt(lat) < 0) {
-                    saturation *= -1
-                }
+            if (parseInt(lat) < 0) {
+                saturation *= -1
+            }
 
-                // log data on image attributes
-                $(that).attr("data-saturation", saturation);
-                $(that).attr("data-exposure", exposure);
-                $(that).attr("data-hour", hour);
-                $(that).attr("data-localHour", localHour);
-
-                Caman(that, function() {
-                    this.saturation(saturation);
-                    this.exposure(exposure);
-                    this.render();
+            // log data on image attributes
+            $(image).attr("data-saturation", saturation);
+            $(image).attr("data-exposure", exposure);
+            $(image).attr("data-hour", hour);
+            $(image).attr("data-localHour", localHour);
+            
+            Caman(image, function() {
+                this.saturation(saturation);
+                this.exposure(exposure);
+                this.render(function() {
+                    if (callback) callback();
                 });
             });
-        }
+        });
     }
 
     function getRandomLocations(locationsByDate, count) {
@@ -437,15 +423,31 @@ $(function() {
         var $resDiv = $("#question-list");
         $resDiv.html(questionsHtml);
 
-        $(".image-pano > img.location").each(manipulateImage);
+        $(".image-pano > img.location").each(function() {
+            var millis = $(this).attr("data-millis");
+            var lat = $(this).attr("data-lat");
+            var lon = $(this).attr("data-lon");
+
+            this.onload = function() {
+                manipulateImage(this, millis, lat, lon);
+            };
+        });
 
         $(".image-pano").click(function() {
             var $img = $(this).find(".location")
             var locations = getLocationsOnDate($img.attr("data-date"));
 
+            var millis = $img.attr("data-millis");
+            var lat = $img.attr("data-lat");
+            var lon = $img.attr("data-lon");
+
             $img.hide();
             $img.nextAll(".play-icon").hide();
             $img.nextAll(".hyperlapse").show();
+
+            window.modifyHyperlapseImages = function(image, callback) {
+                manipulateImage(image, millis, lat, lon, callback);
+            };
 
             createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
         });

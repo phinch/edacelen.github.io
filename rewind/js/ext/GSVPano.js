@@ -85,7 +85,14 @@ GSVPANO.PanoLoader = function (parameters) {
 				(function (x, y) { 
 					var img = new Image();
 					img.addEventListener('load', function () {
-						self.composeFromTile(x, y, this);
+						// No-modification
+						// self.composeFromTile(x, y, this);
+
+						// Modification with Caman
+						var that = this;
+						window.modifyHyperlapseImages(this, function() {
+							self.composeFromTile(x, y, that);
+						});
 					});
 					img.addEventListener('error', function () {
 						self.composeFromTile(x, y, new Image());
