@@ -40,7 +40,7 @@ $(function() {
             height: panoHeight,
             millis: 1000 / 24,
             distance_between_points: 1,
-            max_points: 300
+            max_points: 10
         });
 
         hyperlapse.onError = function(e) {
@@ -306,7 +306,19 @@ $(function() {
             }
 
             if (parseInt(lat) < 0) {
-                saturation *= -1
+                saturation *= -1;
+            }
+
+
+            // if (callback) {
+            //     saturation = -80;
+            //     exposure = 40;
+            // }
+
+            var parent = image.parentNode; 
+            if (!parent) {
+                parent = document.createElement("div");
+                parent.appendChild(image);
             }
 
             // log data on image attributes
@@ -319,7 +331,9 @@ $(function() {
                 this.saturation(saturation);
                 this.exposure(exposure);
                 this.render(function() {
-                    if (callback) callback();
+                    if (callback)  {
+                        callback(parent.childNodes[0]);
+                    }
                 });
             });
         });
