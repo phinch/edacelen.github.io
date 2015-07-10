@@ -32,6 +32,7 @@ body {
 
 .image-pano {
 	cursor: pointer;
+	z-index: 99;
 }
 
 .image-pano img.play-icon {

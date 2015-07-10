@@ -745,6 +745,10 @@ var Hyperlapse = function(container, params) {
 		return new google.maps.LatLng(_lat, _lon);
 	};
 
+	this.getPoints = function() {
+		return _h_points;
+	};
+
 	this.getPosition = function() {
 		return _point_index;
 	};

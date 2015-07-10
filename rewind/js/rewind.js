@@ -55,17 +55,19 @@ $(function() {
             $(pano).find("img").hide();
             $(pano).find("canvas").show();
 
-            hyperlapse.play(); //adding slider instead.
-            // $("#slider").attr("min", 0);
-            // $("#slider").attr("max", hyperlapse.getPositionCount()-1);
-            // $("#slider").val(0);
-            // $("#slider").show();
-            // //hyperlapse.setPosition(0);
-            // $("#slider").on("input", function(){
-            // 	var sliderPos = parseInt($("#slider").val());
-            // 	//console.log(sliderPos);
-            // 	hyperlapse.setPosition(sliderPos);
-            // });
+            hyperlapse.pause();
+            var hyperlapsePoints = hyperlapse.getPoints();
+            var processedPoints = 0;
+            _.each(hyperlapsePoints, function(point, i, points) {
+                window.modifyHyperlapseImages(point.image, function() {
+                    processedPoints++;
+                    console.log("Processed:", processedPoints, "off", points.length);
+                    if (processedPoints == points.length) {
+                        hyperlapse.play();
+                    }
+                });
+            });
+            
             //when cursor is on rew\ind video
             $(pano).on("mousemove", function(event) {
                 var mouseX = parseInt(event.pageX - parseInt($(pano).offset().left));
@@ -255,6 +257,18 @@ $(function() {
 
     var timeZoneUrlTpl = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
+    var timezoneJSONs = {};
+    function getTimezoneJSON(url, callback) {
+        if (timezoneJSONs[url]) { 
+            callback(timezoneJSONs[url]);
+        } else {
+            $.getJSON(url, function(data) {
+                timezoneJSONs[url] = data;
+                callback(data);
+            });
+        }
+    }
+
     function manipulateImage(image, millis, lat, lon, callback) {
         var datetime = moment(parseInt(millis));
         var hour = datetime.utc().hour();
@@ -265,14 +279,16 @@ $(function() {
 
         // var exposure = hour > 12 ? -60 : 40;
 
+        console.log("Manipulating:", image);
+
         var month = getMonth(datetime.format("MM/DD/YYYY"));
         // var saturation = MONTH_SATURATION[month];
         
-        $.getJSON(timeZoneUrl, function(data) {
+        getTimezoneJSON(timeZoneUrl, function(data) {
             var hourOffset = data.rawOffset / 60 / 60;
             var localHour = ( hour + hourOffset + 24 ) % 24;
 
-
+            console.log("Received location data for:", image);
 
             var res = getImageLightness(image);
             var avgBrightness = res[0];
@@ -308,7 +324,6 @@ $(function() {
             if (parseInt(lat) < 0) {
                 saturation *= -1;
             }
-
 
             // if (callback) {
             //     saturation = -80;
