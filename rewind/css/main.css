@@ -39,9 +39,26 @@ body {
 	display: none;
 }
 
+.image-pano img.loading-gif {
+	display: none;
+}
+
 .image-pano:hover img.play-icon {
 	display: block;
 }
+
+.image-pano.loading-hyperlapse img.play-icon {
+	display: none;
+}
+
+.image-pano.loading-hyperlapse:hover img.play-icon {
+	display: none;
+}
+
+.image-pano.loading-hyperlapse img.loading-gif {
+	display: block;
+}
+
 
 .location-questions > ol {
 	float: left;	

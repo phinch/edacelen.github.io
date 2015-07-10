@@ -52,9 +52,7 @@ $(function() {
         };
 
         hyperlapse.onLoadComplete = function(e) {
-            $(pano).find("img").hide();
-            $(pano).find("canvas").show();
-
+            
             hyperlapse.pause();
             var hyperlapsePoints = hyperlapse.getPoints();
             var processedPoints = 0;
@@ -63,6 +61,11 @@ $(function() {
                     processedPoints++;
                     console.log("Processed:", processedPoints, "off", points.length);
                     if (processedPoints == points.length) {
+                        $(pano).find("img").hide();
+                        $(pano).find("canvas").show();
+                        $(pano).show();
+                        $(pano.parentNode).find('.location').hide();
+                        $(pano.parentNode).find('.loading-gif').hide();
                         hyperlapse.play();
                     }
                 });
@@ -400,6 +403,7 @@ $(function() {
             "<div class='image-pano' style='position:relative'>" +
                 "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:600px; height:600px;'></img>" +
                 "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>"+
+                "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
             "<ol>" +
@@ -463,6 +467,7 @@ $(function() {
         });
 
         $(".image-pano").click(function() {
+            $(this).addClass("loading-hyperlapse");
             var $img = $(this).find(".location")
             var locations = getLocationsOnDate($img.attr("data-date"));
 
@@ -470,9 +475,9 @@ $(function() {
             var lat = $img.attr("data-lat");
             var lon = $img.attr("data-lon");
 
-            $img.hide();
+            // $img.hide();
             $img.nextAll(".play-icon").hide();
-            $img.nextAll(".hyperlapse").show();
+            // $img.nextAll(".hyperlapse").show();
 
             window.modifyHyperlapseImages = function(image, callback) {
                 manipulateImage(image, millis, lat, lon, callback);
