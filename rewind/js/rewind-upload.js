@@ -1,5 +1,6 @@
 $(function() {
 	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+    REWIND_HOST = "localhost:8080";
 
 	// For northern hemisphere only!
 	MONTH_SATURATION = {
@@ -357,18 +358,17 @@ $(function() {
         });
     }
 
-    function getRandomLocations(locationsByDate, count) {
+    function getRandomLocations(trips, count) {
         var randLocations = [];
         var i = 0;
-        var dates = _.keys(locationsByDate);
         while (i < count) {
-            var date = dates[Math.floor(Math.random() * dates.length)];
-            var dateLocations = getLocationsOnDate(date);
+            var trip = Math.floor(Math.random() * trips.length);
+            var tripLocations = trips[trip];
 
-            if (dateLocations.length > 2) {
-                var location = dateLocations[Math.floor(Math.random() * dateLocations.length)];
+            if (tripLocations.length > 2) {
+                var location = tripLocations[Math.floor(Math.random() * tripLocations.length)];
                 randLocations.push({
-                    date: date,
+                    trip: trip,
                     location: location
                 });
                 i++;
@@ -382,13 +382,71 @@ $(function() {
     }
 
     function processLocationExport(fileContents) {
-        locationsByDate = parseLocationJson(fileContents);
+        locations = parseLocationJson(fileContents);
 
         $("#upload-wrapper").hide();
 
+        locations.reverse();
+
+        var locationsCsvLines = _.map(locations, function(location) {
+            return location.latitude + "," + location.longitude + "," + location.millis + "\r\n";
+        });
+
+        var webSocket = new WebSocket("ws://" + REWIND_HOST + "/Rewind/Endpoint");
+        
+        webSocket.onopen = function(event){
+            // webSocket.send(inversedBatch);
+            while (locationsCsvLines.length > 0) {
+                var removed = locationsCsvLines.splice(0, 50);
+                var csvPartial = _.reduce(removed, function(memo, line) { return memo + line; }, "");
+                webSocket.send(csvPartial);
+            }
+            webSocket.send("\r\n");
+        };
+
+        webSocket.onmessage = function(event){
+            handleServerResponse(event.data);
+        };
+
+        webSocket.onclose = function(event){
+            console.log("Server connection is closed!")
+        };
+    }
+
+    var trips = [];
+    function handleServerResponse(response) {
+        // DO SOMETHING WITH THE RESPONSE
+        if (response !== "\r\n")
+            trips.push(parseLocationCsv(response));
+        else
+            generateRewindSurvey(trips);
+    }
+
+    function parseLocationsCsv(csv) {
+        var lines = csv.split(/\r?\n/);
+        var results = [];
+
+        lines.forEach(function(line, i) {
+            var parts = line.split(",");
+
+            var lat    = parseFloat(parts[0]);
+            var lon    = parseFloat(parts[1]);
+            var timeMs = parseInt(parts[2]);
+
+            results.push({
+                latitude: lat,
+                longitude: lon,
+                millis: timeMs
+            });
+        });
+
+        return results;
+    }
+
+    function generateRewindSurvey(trips) {
         var imageIndex = 0;
         var imageCount = 10;
-        var locations = getRandomLocations(locationsByDate, imageCount);
+        var locations = getRandomLocations(trips, imageCount);
         //var urls = generateStreetViewUrls(locations, false);
         var flatLocations = _.pluck(locations, "location");
 
@@ -401,7 +459,7 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:600px; height:600px;'></img>" +
+                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-trip='{{TRIP}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:600px; height:600px;'></img>" +
                 "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>"+
                 "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
@@ -415,11 +473,11 @@ $(function() {
             "</div>" +
             "</li>" +
             // "<li class='question'>" +
-            // 	"<div class='qtext'> Is this an important place to you?</div>" +
-            // 	"<div class='qanswers'>" +
-            // 		"<input type='radio' name='q{{INDEX}}ans2' value='true'></input><span class='ans-label'> Yes</span>" +
-            // 		"<input type='radio' name='q{{INDEX}}ans2' value='false'></input><span class='ans-label'> No</span>" +
-            // 	"</div>" +
+            //  "<div class='qtext'> Is this an important place to you?</div>" +
+            //  "<div class='qanswers'>" +
+            //      "<input type='radio' name='q{{INDEX}}ans2' value='true'></input><span class='ans-label'> Yes</span>" +
+            //      "<input type='radio' name='q{{INDEX}}ans2' value='false'></input><span class='ans-label'> No</span>" +
+            //  "</div>" +
             // "</li>" +
             "<li class='question'>" +
             "<div class='qtext'> Do you want to keep this picture?</div>" +
@@ -444,7 +502,7 @@ $(function() {
             var questionHtml = questionHtmlTpl
                 .replace("{{SRC}}", url)
                 .replace(/{{INDEX}}/g, i)
-                .replace("{{DATE}}", locations[i].date)
+                .replace("{{TRIP}}", locations[i].trip)
                 .replace("{{LAT}}", locations[i].location.latitude)
                 .replace("{{LON}}", locations[i].location.longitude)
                 .replace("{{MILLIS}}", locations[i].location.millis);
@@ -469,7 +527,7 @@ $(function() {
         $(".image-pano").click(function() {
             $(this).addClass("loading-hyperlapse");
             var $img = $(this).find(".location")
-            var locations = getLocationsOnDate($img.attr("data-date"));
+            var locations = trips[parseInt($img.attr("data-trip"))];
 
             var millis = $img.attr("data-millis");
             var lat = $img.attr("data-lat");
@@ -485,14 +543,6 @@ $(function() {
 
             createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
         });
-
-        // $(".image-pano > img").on("mouseover", function() {
-        //     $(this.parentNode).append("<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>");
-        // });
-
-        // $(".image-pano > img").on("mouseout", function() {
-        //     $(this.parentNode).find("img.play-icon").remove();
-        // });
 
         $(".location-questions > ol > li:first-child input").change(function() {
             if (this.value == "true") {
@@ -653,7 +703,7 @@ $(function() {
 
     function parseLocationJson(locJson) {
         var obj = JSON.parse(locJson);
-        var results = {};
+        var results = [];
 
         obj.locations.forEach(function(location, i) {
             if (i % 1000 == 0) {
@@ -664,21 +714,14 @@ $(function() {
 
             var lat = location.latitudeE7 * 0.0000001;
             var lon = location.longitudeE7 * 0.0000001;
+            var timeMs = parseInt(location.timestampMs);
             //console.log("Latitude: " + lat + "    Longitude: " + lon);
 
-            //time checks
-            var timeMs = parseInt(location.timestampMs);
-            var date = moment(timeMs).format("MM/DD/YYYY");
-            if (!results[date]) {
-                results[date] = [];
-            }
-            results[date].push({
+            results.push({
                 latitude: lat,
                 longitude: lon,
                 millis: timeMs
             });
-
-            //if (Math.random() > 0.99) 
         });
 
         return results;
