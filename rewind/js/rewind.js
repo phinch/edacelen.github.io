@@ -20,9 +20,13 @@ $(function() {
 		"11": -10,
 	};
 
+    var ambiance = null;
+
+
     function createHyperlapse(locations, pano) {
         var panoWidth = 600;
         var panoHeight = 600;
+
 
         $(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
 
@@ -40,7 +44,7 @@ $(function() {
             height: panoHeight,
             millis: 1000 / 24,
             distance_between_points: 1,
-            max_points: 300
+            max_points: 100
         });
 
         hyperlapse.onError = function(e) {
@@ -67,6 +71,8 @@ $(function() {
                         $(pano.parentNode).find('.location').hide();
                         $(pano.parentNode).find('.loading-gif').hide();
                         hyperlapse.play();
+                        ambiance = new Audio("./audio/thunder.mp3");
+                        ambiance.play();
                     }
                 });
             });
@@ -205,6 +211,7 @@ $(function() {
         var brightness = colorSum / (image.width * image.height);
         var saturation = saturSum / (image.width * image.height);
         return [brightness, saturation];
+        //return [0.5, 0.5];
     }
 
     var dragArea = document.getElementById('file-drop-area');
@@ -476,7 +483,7 @@ $(function() {
             var lon = $img.attr("data-lon");
 
             // $img.hide();
-            $img.nextAll(".play-icon").hide();
+            // $img.nextAll(".play-icon").hide();
             // $img.nextAll(".hyperlapse").show();
 
             window.modifyHyperlapseImages = function(image, callback) {
@@ -523,6 +530,7 @@ $(function() {
         $("#submitButton").click(function() {
             var questions = $(".location-questions");
             var answers = [];
+            if (ambiance) ambiance.pause();
 
             questions.each(function(i, locQuestion) {
                 var url = $(locQuestion).find("img").attr("src");
@@ -549,7 +557,8 @@ $(function() {
         });
         $("#nextButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
-            $("img.location").show();
+            $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
+            if (ambiance) ambiance.pause();
 
 
             $("#submitButton").visible();
@@ -565,10 +574,13 @@ $(function() {
             console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
         });
         $("#backButton").click(function() {
-            $("div.hyperlapse > *").remove();
+            $("div.hyperlapse").hide().find("*").remove();
+            $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
+            if (ambiance) ambiance.pause();
 
             $("#nextButton").visible();
             $("#submitButton").visible();
+            if (ambiance) ambiance.pause();
             if (imageIndex > 0) {
                 imageIndex--;
             }
