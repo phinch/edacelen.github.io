@@ -35,66 +35,31 @@ $(function() {
             return;
         }
 
-        var hyperlapse = new Hyperlapse(pano, {
-            //lookat: new google.maps.LatLng(41.842085, -71.394373),//(37.81409525128964,-122.4775045005249),
-            zoom: 2,
-            use_lookat: false,
-            elevation: 50,
-            width: panoWidth,
-            height: panoHeight,
-            millis: 1000 / 24,
-            distance_between_points: 1,
-            max_points: 100
-        });
-
-        hyperlapse.onError = function(e) {
-            console.log(e);
-        };
-
-        hyperlapse.onRouteComplete = function(e) {
-            hyperlapse.load();
-        };
-
-        hyperlapse.onLoadComplete = function(e) {
-            
-            hyperlapse.pause();
-            var hyperlapsePoints = hyperlapse.getPoints();
-            var processedPoints = 0;
-            _.each(hyperlapsePoints, function(point, i, points) {
-                window.modifyHyperlapseImages(point.image, function() {
-                    processedPoints++;
-                    console.log("Processed:", processedPoints, "off", points.length);
-                    if (processedPoints == points.length) {
-                        $(pano).find("img").hide();
-                        $(pano).find("canvas").show();
-                        $(pano).show();
-                        $(pano.parentNode).find('.location').hide();
-                        $(pano.parentNode).find('.loading-gif').hide();
-                        hyperlapse.play();
-                        ambiance = new Audio("./audio/thunder.mp3");
-                        ambiance.play();
-                    }
-                });
-            });
-            
-            //when cursor is on rew\ind video
-            $(pano).on("mousemove", function(event) {
-                var mouseX = parseInt(event.pageX - parseInt($(pano).offset().left));
-                var mouseY = parseInt(event.pageY - parseInt($(pano).offset().top));
-                // console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
-                var imagePos = parseInt(mouseX * (hyperlapse.getPositionCount() - 1) / panoWidth);
-                console.log(imagePos);
-                hyperlapse.setPosition(imagePos);
-            });
-        };
-
         var routes = sliceLocationsToRoutes(locations);
         var gResults = [];
 
         for (var i = 0; i < routes.length; i++) {
             getGoogleRoute(routes, gResults, i, function() {
-                hyperlapse.generate({
-                    route: mergeGoogleResponses(gResults)
+                var routeSequence = StreetviewSequence($(pano), {
+                    route: mergeGoogleResponses(gResults),
+                    duration: 15000,
+                    totalFrames: 300,
+                    loop: true,
+                    width: panoWidth,
+                    height: panoHeight,
+                    domain: 'http://maps.googleapis.com',
+                    key: 'AIzaSyDBX-55LuU2jwLxHuqqK5PN4o--O-E4SmU',
+                });
+
+                routeSequence.done(function(player) {
+                    $(pano).find("img").hide();
+                    $(pano).find("canvas").show();
+                    $(pano).show();
+                    $(pano.parentNode).find('.location').hide();
+                    $(pano.parentNode).find('.loading-gif').hide();
+                    player.play();
+                    ambiance = new Audio("./audio/thunder.mp3");
+                    ambiance.play();
                 });
             });
         }
