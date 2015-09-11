@@ -310,10 +310,10 @@ $(function() {
                 saturation *= -1;
             }
 
-            if (callback) {
-                saturation = -80;
-                exposure = 40;
-            }
+            // if (callback) {
+            //     saturation = -80;
+            //     exposure = 40;
+            // }
 
             var parent = image.parentNode; 
             if (!parent) {
