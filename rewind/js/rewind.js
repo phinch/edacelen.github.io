@@ -43,12 +43,12 @@ $(function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
                     duration: 15000,
-                    totalFrames: 300,
+                    totalFrames: 100,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
                     domain: 'http://maps.googleapis.com',
-                    key: 'AIzaSyDBX-55LuU2jwLxHuqqK5PN4o--O-E4SmU',
+                    key: 'AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E',
                 });
 
                 routeSequence.done(function(player) {
@@ -60,6 +60,16 @@ $(function() {
                     player.play();
                     ambiance = new Audio("./audio/thunder.mp3");
                     ambiance.play();
+
+                    //when cursor is on rewind video
+                    $(pano).on("mousemove", function(event) {
+                        var mouseX = parseInt(event.pageX - parseInt($(pano).offset().left));
+                        var mouseY = parseInt(event.pageY - parseInt($(pano).offset().top));
+                        // console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
+                        var imagePos = mouseX / panoWidth;
+                        console.log("Frame progress:", imagePos);
+                        player.setProgress(imagePos);
+                    });
                 });
             });
         }
@@ -176,7 +186,7 @@ $(function() {
         var brightness = colorSum / (image.width * image.height);
         var saturation = saturSum / (image.width * image.height);
         return [brightness, saturation];
-        //return [0.5, 0.5];
+        // return [0.5, 0.5];
     }
 
     var dragArea = document.getElementById('file-drop-area');
@@ -300,10 +310,10 @@ $(function() {
                 saturation *= -1;
             }
 
-            // if (callback) {
-            //     saturation = -80;
-            //     exposure = 40;
-            // }
+            if (callback) {
+                saturation = -80;
+                exposure = 40;
+            }
 
             var parent = image.parentNode; 
             if (!parent) {
@@ -321,6 +331,7 @@ $(function() {
                 this.saturation(saturation);
                 this.exposure(exposure);
                 this.render(function() {
+                    console.log("Image manipulation done.");
                     if (callback)  {
                         callback(parent.childNodes[0]);
                     }
@@ -453,6 +464,7 @@ $(function() {
 
             window.modifyHyperlapseImages = function(image, callback) {
                 manipulateImage(image, millis, lat, lon, callback);
+                // callback(image);
             };
 
             createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);

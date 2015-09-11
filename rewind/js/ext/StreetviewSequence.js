@@ -359,6 +359,7 @@
                 return function (locationData) {
                     var currentLocationData = _.clone(locationData);
                     var image;
+                    var imageDfd = new $.Deferred();
 
                     currentLocationData.heading += calcScalar(p, options.easeHeading, options.headingSkewStart, options.headingSkewEnd);
                     currentLocationData.pitch += calcScalar(p, options.easePitch, options.pitchSkewStart, options.pitchSkewEnd);
@@ -370,16 +371,26 @@
                     currentLocationData.domain = options.domain;
 
                     image = new Image();
-                    image.onload = imageOnLoad;
+                    image.crossOrigin = "Anonymous";
+                    image.onload = function () {
+                        // Modification with Caman
+                        window.modifyHyperlapseImages(this, function(modImage) {
+                            console.log("Modded %", p);
+                            imageDfd.resolve(modImage);
+                            imageOnLoad();
+                        });
+                    };
                     image.src = getStreetViewImageURL(currentLocationData);
-                    return image;
+                    return imageDfd.promise();
                 };
             };
 
             locationOnFailHandlerGenerator = function () {
                 return function () {
+                    var imageDfd = new $.Deferred();
                     imageOnLoad();
-                    return new Image();
+                    imageDfd.resolve(new Image());
+                    return imageDfd.promise();
                 };
             };
 
@@ -389,6 +400,7 @@
                 p = (i / (options.totalFrames - 1));
                 locationPromise = locationDataRetriever(p)
                     .then(locationOnDataHandlerGenerator(p), locationOnFailHandlerGenerator(p))
+                    .then(function(img) { return img; })
                 ;
                 images.push(locationPromise);
             }
@@ -408,6 +420,11 @@
             tween.resume();
         }
 
+        function setProgress(p) {
+            tween.pause();
+            tween.progress(p);
+        }
+
         _init();
 
         //-- Expose:
@@ -415,7 +432,8 @@
             getStreetHeading: getStreetHeading,
             getStreetViewImageURL: getStreetViewImageURL,
             pause: pause,
-            play: play
+            play: play,
+            setProgress: setProgress,
         };
 
         return streetViewPanoramaDfd.promise();
