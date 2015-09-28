@@ -43,7 +43,7 @@ $(function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
                     duration: 15000,
-                    totalFrames: 100,
+                    totalFrames: 150,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
@@ -156,8 +156,46 @@ $(function() {
     }
 
     // inspired from StackOverflow: http://stackoverflow.com/a/13763063/1246009
-    function getImageLightness(image) {
-        // create canvas
+    function getImageLightnessSampled(image) {
+        // constants
+        var sampleCount = 10000; // number of samples
+        
+        var canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+        var colorSum = 0, saturSum = 0;
+
+        for (var i = 0; i < sampleCount; i++) {
+            var randX = Math.floor(Math.random() * canvas.width);
+            var randY = Math.floor(Math.random() * canvas.height);
+
+            var x = (randY * canvas.width) + randX;
+
+            var r = data[x] / 256;
+            var g = data[x + 1] / 256;
+            var b = data[x + 2] / 256;
+
+            colorSum += (r + g + b) / 3;
+
+            var cmin = Math.min(r, g, b);
+            var cmax = Math.max(r, g, b);
+            var cdelta = cmax - cmin;
+
+            saturSum += (cmax != 0 ? cdelta / cmax : 0);
+        }
+
+        var brightness = colorSum / sampleCount;
+        var saturation = saturSum / sampleCount;
+        return [brightness, saturation];
+    }
+
+    function getImageLightnessFull(image) {
         var canvas = document.createElement("canvas");
         canvas.width = image.width;
         canvas.height = image.height;
@@ -186,6 +224,7 @@ $(function() {
         var brightness = colorSum / (image.width * image.height);
         var saturation = saturSum / (image.width * image.height);
         return [brightness, saturation];
+
         // return [0.5, 0.5];
     }
 
@@ -275,7 +314,7 @@ $(function() {
 
             console.log("Received location data for:", image);
 
-            var res = getImageLightness(image);
+            var res = getImageLightnessSampled(image);
             var avgBrightness = res[0];
             var avgSaturation = res[1];
 
