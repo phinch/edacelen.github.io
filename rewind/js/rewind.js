@@ -99,9 +99,6 @@ $(function() {
         var first = locations.shift()
         var last = locations.pop()
 
-        // Google Maps API stuff here...
-        var directions_service = new google.maps.DirectionsService();
-
         var route = {
             request: {
                 origin: googleLatLng(first),
@@ -115,16 +112,34 @@ $(function() {
             }
         };
 
-        directions_service.route(route.request, function(response, status) {
-            if (status == google.maps.DirectionsStatus.OK) {
-                //hyperlapse.generate( {route:response} );
-                results[i] = response;
+        getRouteFromDirectionsService(route.request, 3, function(err, response) {
+            if (err) {
+                throw Error("Direction Service request failed for: " + JSON.stringify(err));
+            }
 
-                if (_.compact(results).length == routes.length) {
-                    onFinished();
-                }
+            results[i] = response;
+
+            if (_.compact(results).length == routes.length) {
+                onFinished();
+            }
+        });
+    }
+
+    function getRouteFromDirectionsService(request, retry, callback) {
+        var directions_service = new google.maps.DirectionsService();
+
+        directions_service.route(request, function(response, status) {
+            if (status == google.maps.DirectionsStatus.OK) {
+                callback(null, response);
             } else {
-                console.log(status);
+                if (retry > 0) {
+                    setTimeout(function() { 
+                        getRouteFromDirectionsService(request, retry - 1, callback); 
+                    }, 200);
+                } else {
+                    console.log(status);
+                    callback(status, null);
+                }
             }
         });
     }
@@ -300,7 +315,7 @@ $(function() {
 
         // var exposure = hour > 12 ? -60 : 40;
 
-        console.log("Manipulating:", image);
+        // console.log("Manipulating:", image);
 
         var month = getMonth(datetime.format("MM/DD/YYYY"));
         // var saturation = MONTH_SATURATION[month];
@@ -309,7 +324,7 @@ $(function() {
             var hourOffset = data.rawOffset / 60 / 60;
             var localHour = ( hour + hourOffset + 24 ) % 24;
 
-            console.log("Received location data for:", image);
+            // console.log("Received location data for:", image);
 
             var res = getImageLightnessSampled(image);
             var avgBrightness = res[0];
@@ -367,7 +382,7 @@ $(function() {
                 this.saturation(saturation);
                 this.exposure(exposure);
                 this.render(function() {
-                    console.log("Image manipulation done.");
+                    // console.log("Image manipulation done.");
                     if (callback)  {
                         callback(parent.childNodes[0]);
                     }
@@ -662,7 +677,7 @@ $(function() {
             var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
-            if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
+            // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
         });
 
         return urls;
@@ -674,7 +689,7 @@ $(function() {
 
         obj.locations.forEach(function(location, i) {
             if (i % 1000 == 0) {
-                console.log("Parsing: " + i + "/" + obj.locations.length);
+                // console.log("Parsing: " + i + "/" + obj.locations.length);
             }
 
             if (location.accuracy > 10) return;

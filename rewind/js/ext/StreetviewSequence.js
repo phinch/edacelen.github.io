@@ -375,7 +375,7 @@
                     image.onload = function () {
                         // Modification with Caman
                         window.modifyHyperlapseImages(this, function(modImage) {
-                            console.log("Modded %", p);
+                            // console.log("Modded %", p * 100);
                             imageDfd.resolve(modImage);
                             imageOnLoad();
                         });
