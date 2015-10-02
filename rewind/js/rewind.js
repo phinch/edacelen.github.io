@@ -21,13 +21,10 @@ $(function() {
 	};
 
     var ambiance = null;
-
+    var panoWidth  = 640;
+    var panoHeight = 640;
 
     function createHyperlapse(locations, pano) {
-        var panoWidth = 600;
-        var panoHeight = 600;
-
-
         $(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
 
         if (locations.length < 2) {
@@ -423,9 +420,9 @@ $(function() {
         var questionHtmlTpl = "" +
             "<div class='location-questions' id='q{{INDEX}}'>" +
             "<div class='image-pano' style='position:relative'>" +
-                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:600px; height:600px;'></img>" +
-                "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>"+
-                "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'></img>"+
+                "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:"+ panoWidth +"px; height:"+ panoHeight +"px;'></img>" +
+                "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'>"+
+                "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
             "<ol>" +
@@ -508,14 +505,6 @@ $(function() {
 
             createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
         });
-
-        // $(".image-pano > img").on("mouseover", function() {
-        //     $(this.parentNode).append("<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:250px 250px;'>");
-        // });
-
-        // $(".image-pano > img").on("mouseout", function() {
-        //     $(this.parentNode).find("img.play-icon").remove();
-        // });
 
         $(".location-questions > ol > li:first-child input").change(function() {
             if (this.value == "true") {
@@ -670,7 +659,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size=600x600&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
             if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");

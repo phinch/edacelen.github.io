@@ -19,7 +19,7 @@ body {
 }
 
 #question-list {
-	width: 900px;
+	width: 940px;
 	margin: 0 auto;
 }
 
@@ -27,7 +27,7 @@ body {
 	float: left;
 	margin-top: -75px;
 	box-shadow: 0 5px 10px rgba(0,0,0,.3);
-	height: 600px;
+	height: 640px;
 }
 
 .image-pano {
@@ -90,7 +90,7 @@ div.hyperlapse canvas {
 	margin: 0 auto;
 	width: 300px;
 	margin-top: -280px;
-	padding-left: 650px
+	padding-left: 690px
 }
 
 #button-box button {
