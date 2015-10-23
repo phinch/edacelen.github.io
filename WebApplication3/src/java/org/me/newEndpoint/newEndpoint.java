@@ -50,24 +50,27 @@ public class newEndpoint {
     @OnMessage
     public void onMessage(String message, Session session) throws ParseException{
         //System.out.println("Message from " + session.getId() + ": " + message);
-        System.out.println("Message from " + session.getId() + "is got!");
+        System.out.println("Message from " + session.getId());
 
         try {
             String[] input = message.split(";");    
-            ArrayList<ArrayList<Location2>> trips = test.getTrips(input);            
-            
+            ArrayList<ArrayList<Location2>> trips = test.getTrips(input);
+            System.out.println("there are in total" + trips.size() + "trips");
             for(ArrayList<Location2>trip : trips){
                 // get a processed trip    
+                System.out.println("records of this trip:" + trip.size());
                 ArrayList<String> output = test.processTrip(trip);
                 
                 String processedTrip = "";
-                int i=0;
-                for(i=0; i<output.size()-1; i++){
+                int i = 0;
+                for(i = 0; i < output.size() - 1; i++){
                     processedTrip += output.get(i);
                     processedTrip += ";";
                 }
+                System.out.println("number of important records: " + output.size());
                 processedTrip += output.get(i);
                 session.getBasicRemote().sendText(processedTrip);
+                
             }
         } catch (IOException ex) {
             ex.printStackTrace();

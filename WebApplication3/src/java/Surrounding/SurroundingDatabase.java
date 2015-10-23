@@ -34,77 +34,60 @@ public class SurroundingDatabase {
      */
     public SurroundingDatabase(){
         this.SurReader = new SurroundingFileReader();
-        
     }
   
     /**
-	 * if a single sample has one or more than one specific surrounding object, reserve this sample
-	 * pick one single sample to test every two samples (^*^*^*^ ----> pick ^ to test, two adjacent * are bounds of effective intervals)
-	 * @param samplesFromOutputLocations samples from ouput Locations
-	 * @param surroundingDatabase surroundingDatabase
-	 * @return index of reserved samples in samplesFromOutputLocations
-	 */
-    /**
-     * 
-     * @param samplesFromOutputLocations
-     * @return
+     * initialize SorroundingDatabase
+     * @return table
      */
-	public ArrayList<Integer> getReservedSamplesIndex(ArrayList<Location2> samplesFromOutputLocations){
-		ArrayList<Integer> samplesIndexReserved = new ArrayList<Integer>();
-		Mongo mongo = null;
-		DB db = null;
-		DBCollection table = null;
-		
-		try{
-			mongo = new Mongo("localhost", 27017);
-		} catch (Exception e){
-			// TODO ...
-			e.printStackTrace();
-		}
-		
-		db = mongo.getDB("Rewind_Surroudings");;
-		table = db.getCollection("location");
-		
-		for(int i=0; i<samplesFromOutputLocations.size(); i+=2){
-			
-			String sLng = samplesFromOutputLocations.get(i).longitude;	Double dLng = new Double(sLng);
-			String sLat = samplesFromOutputLocations.get(i).latitude;	Double dLat = new Double(sLat);
-			
-			double distance = 0;
-			//System.out.println(samplesFromOutputLocations.get(i).mode);
-			if(!samplesFromOutputLocations.get(i).mode.equals("still")){
-				if(samplesFromOutputLocations.get(i).mode.equals("walk") || samplesFromOutputLocations.get(i).mode.equals("run")){
-					distance = 0.1/111.12;
-				}else if(samplesFromOutputLocations.get(i).mode.equals("vehicle")){
-					distance = 0.5/111.12;
-				}else {
-					distance = 2/111.12;
-				}
-				
-				String sDistance = ""+distance;
-				
-				DBCursor cursor = table.find(new BasicDBObject("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));
-				
-				// has result
-				if (cursor.hasNext()) {
-					samplesIndexReserved.add(i);
-			    }
-				
-			}
-			
-			
-			
-		    
-		}
-		return samplesIndexReserved;
-	}
-	
-  
-   
-  
+    public DBCollection initialize(){
+    	Mongo mongo = null;
+        DB db = null;
+        DBCollection table = null;		
+        try{
+            mongo = new Mongo("localhost", 27017);
+        } catch (Exception e){
+            // TODO ...
+            e.printStackTrace();
+        }		
+        db = mongo.getDB("Rewind_Surroudings");
+        table = db.getCollection("location");
+        return table;
+    }
     
-
-   
-	
+    /**
+     * if a single sample has one or more specific surrounding object (in the surrounding database), keep this sample
+	 * pick one single sample to test every two samples (^*^*^*^ ----> pick ^ to test, two adjacent * are bounds of effective intervals)
+     * @param samplesFromOutputLocations
+     * @return index of interesting samples
+     */
+	public ArrayList<Integer> getInterestingSamplesIndex(ArrayList<Location2> samplesFromOutputLocations, DBCollection table ){
+            ArrayList<Integer> interestingSamplesIndex = new ArrayList<Integer>();
+            if (samplesFromOutputLocations == null || samplesFromOutputLocations.size() == 0) {
+                return interestingSamplesIndex;
+            }
+            for(int i = 0; i < samplesFromOutputLocations.size(); i += 2){			
+                String sLng = samplesFromOutputLocations.get(i).longitude;	Double dLng = new Double(sLng);
+                String sLat = samplesFromOutputLocations.get(i).latitude;	Double dLat = new Double(sLat);			
+                double distance = 0;
+                //System.out.println(samplesFromOutputLocations.get(i).mode);
+                if(!samplesFromOutputLocations.get(i).mode.equals("still")){
+                    if(samplesFromOutputLocations.get(i).mode.equals("walk") || samplesFromOutputLocations.get(i).mode.equals("run")){
+                        distance = 0.1/111.12;
+                    }else if(samplesFromOutputLocations.get(i).mode.equals("vehicle")){
+                        distance = 0.5/111.12;
+                    }else {
+                        distance = 2/111.12;
+                    }				
+                    String sDistance = ""+distance;				
+                    DBCursor cursor = table.find(new BasicDBObject("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));				
+                    // has result
+                    if (cursor.hasNext()) {
+                        interestingSamplesIndex.add(i);
+                    }				
+                }
+            }
+            return interestingSamplesIndex;
+	}
 
 }

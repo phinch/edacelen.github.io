@@ -35,15 +35,39 @@ public class WeatherDatabase {
     }
     
     /**
+     * initialize WeatherDatabase
+     * @return table
+     */
+    public DBCollection initialize(){
+    	Mongo mongo = null;
+        DB db = null;
+        DBCollection table = null;		
+        try{
+            mongo = new Mongo("localhost", 27017);
+        } catch (Exception e){
+                // TODO ...
+            e.printStackTrace();
+        }		
+        db = mongo.getDB("Rewind_Weather_us");
+        table = db.getCollection("weather_us");
+        return table;
+    }
+    
+    /**
      * get weather info every 15 minutes
      * @param ReservedIntervals
      * @return
      */
-    public ArrayList<ArrayList<String>> getWeatherTag(ArrayList<Location2> ReservedIntervals){
+    public ArrayList<ArrayList<String>> getWeatherTag(ArrayList<Location2> InterestingIntervals, DBCollection weatherTable){
     	ArrayList<ArrayList<String>> weatherTags = new ArrayList<ArrayList<String>>();
+    	if (InterestingIntervals == null || InterestingIntervals.size() == 0){
+            return weatherTags;
+    	}
     	// get weatherInfo <WeatherInfo>
-    	ArrayList<WeatherInfo> temp = WDBReader.getWeatherInfo(ReservedIntervals);
+    	// some value of temp can be "" "" "";
+    	ArrayList<WeatherInfo> temp = WDBReader.getWeatherInfo(InterestingIntervals, weatherTable);
     	// get weatherTags <String>
+    	// weatherTags contain both valid and invalid value ("" "" "")
     	weatherTags = WDBReader.weatherInfoToTag(temp);
     	return weatherTags;
     }

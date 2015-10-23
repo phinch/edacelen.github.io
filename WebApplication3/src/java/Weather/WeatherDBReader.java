@@ -16,95 +16,79 @@ import Location2.Location2;
 
 public class WeatherDBReader {
     
-	public ArrayList<WeatherInfo> getWeatherInfo(ArrayList<Location2> reservedSamplesFromOutputLocations){
-    	
+	public ArrayList<WeatherInfo> getWeatherInfo(ArrayList<Location2> interestingIntervals, DBCollection weatherTable){
     	ArrayList<WeatherInfo> weatherInfoList = new ArrayList<WeatherInfo>();
-    	
-		Mongo mongo = null;
-		DB db = null;
-		DBCollection table = null;
-		
-		try{
-			mongo = new Mongo("localhost", 27017);
-		} catch (Exception e){
-			// TODO ...
-			e.printStackTrace();
-		}
-		
-		db = mongo.getDB("Rewind_Weather_us");
-		table = db.getCollection("weather_us");
-		
-		
-		// get weatherInfo every 15 minutes
-    	String begin = reservedSamplesFromOutputLocations.get(0).dateTime;
-		for(int i=0; i<reservedSamplesFromOutputLocations.size(); i++){
-    		double period = getPeriod(begin, reservedSamplesFromOutputLocations.get(i).dateTime);
-    		if(i == 0 || period >= 900){
-    			begin = reservedSamplesFromOutputLocations.get(i).dateTime;
+	// get weatherInfo every 15 minutes
+    	String begin = interestingIntervals.get(0).dateTime;
+        
+        for(int i = 0; i<interestingIntervals.size(); i++){
+            double period = getPeriod(begin, interestingIntervals.get(i).dateTime);
+            if(i == 0 || period >= 900){
+                begin = interestingIntervals.get(i).dateTime;
 
-				String sLng = reservedSamplesFromOutputLocations.get(i).longitude;	Double dLng = new Double(sLng);
-				String sLat = reservedSamplesFromOutputLocations.get(i).latitude;	Double dLat = new Double(sLat);
-				String time = reservedSamplesFromOutputLocations.get(i).dateTime;
-				String dateTime = timeConvertion(time);
-			
-				double distance = 30/111.12;
-				String sDistance = ""+distance;
-					
-				DBCursor cursor = table.find(new BasicDBObject("dateTime", dateTime).append("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));
-				
-				// result: try not to include "+9999" in "stringTemperature" and "9999" in "stringSpeed" and "null" in "precipitation"
-				BasicDBObject result = new BasicDBObject();
-				BasicDBObject tempBasicDBObject = new BasicDBObject();
-				while(cursor.hasNext()){
-					tempBasicDBObject = (BasicDBObject) cursor.next();
-					if(!tempBasicDBObject.get("stringTemperature").equals("+9999") && !tempBasicDBObject.get("stringSpeed").equals("9999")){
-						result = tempBasicDBObject;
-					}
-					if(!tempBasicDBObject.get("precipitation").equals("null")){
-						result = tempBasicDBObject;
-						break;
-					}
-				}
-				if(result.isEmpty()){
-					result = tempBasicDBObject;
-				}
-				//System.out.println(result);
-				WeatherInfo w = new WeatherInfo();
-				if(!result.isEmpty()){
-					String temp = result.get("stringTemperature").toString();
-					if(!temp.equals("9999")){
-						w.temperature = getTemperatureFromRecord(result.get("stringTemperature").toString());
-					}else{
-						w.temperature = "";
-					}
-					
-					String wind = result.get("stringSpeed").toString();
-					if(!wind.equals("9999")){
-						w.windSpeed = getWindSpeedFromRecord(result.get("stringSpeed").toString());
-					}else{
-						w.windSpeed = "";
-					}
-					
-					String prec = result.get("precipitation").toString();
-					if(!prec.equals("null")){
-						w.precipitation = getPrecipitationFromRecord(result.get("precipitation").toString());
-					}else{
-						w.precipitation = "";
-					}
-				    
-				}
-				
-			    weatherInfoList.add(w);
-			    
-    		}else{
-    			weatherInfoList.add(new WeatherInfo(weatherInfoList.get(weatherInfoList.size()-1)));
-    		}
-    		
-		}
-    	
-    	
+                String sLng = interestingIntervals.get(i).longitude;	Double dLng = new Double(sLng);
+                String sLat = interestingIntervals.get(i).latitude;	Double dLat = new Double(sLat);
+                String time = interestingIntervals.get(i).dateTime;
+                String dateTime = timeConvertion(time);
+
+                double distance = 30/111.12;
+                String sDistance = ""+distance;
+
+                DBCursor cursor = weatherTable.find(new BasicDBObject("dateTime", dateTime).append("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));
+
+                // result: try not to include "+9999" in "stringTemperature" and "9999" in "stringSpeed" and "null" in "precipitation"
+                BasicDBObject result = new BasicDBObject();
+                BasicDBObject tempBasicDBObject = new BasicDBObject();
+                while(cursor.hasNext()){
+                    tempBasicDBObject = (BasicDBObject) cursor.next();
+                    if(!tempBasicDBObject.get("stringTemperature").equals("+9999") && !tempBasicDBObject.get("stringSpeed").equals("9999")){
+                        result = tempBasicDBObject;
+                    }
+                    if(!tempBasicDBObject.get("precipitation").equals("null")){
+                        result = tempBasicDBObject;
+                        break;
+                    }
+                }
+                // if no match is found, reuslt is empty
+                if(result.isEmpty()){
+                    result = tempBasicDBObject;
+                }
+                // System.out.println(result);
+                // if result is empty, w has default value "", "", "" for windSpeed, temperature, and precipitation
+                WeatherInfo w = new WeatherInfo();
+                if(!result.isEmpty()){
+                    System.out.println("result is not empty");
+                    String temp = result.get("stringTemperature").toString();
+                    
+                    // get temperature
+                    if(!temp.equals("9999")){
+                        w.temperature = getTemperatureFromRecord(result.get("stringTemperature").toString());
+                    }else{
+                            w.temperature = "";
+                    }
+                    // get wind
+                    String wind = result.get("stringSpeed").toString();
+                    if(!wind.equals("9999")){
+                        w.windSpeed = getWindSpeedFromRecord(result.get("stringSpeed").toString());
+                    }else{
+                            w.windSpeed = "";
+                    }
+                    // get precipitation
+                    String prec = result.get("precipitation").toString();
+                    
+                    if(!prec.equals("null")){
+                            w.precipitation = getPrecipitationFromRecord(result.get("precipitation").toString());
+                    }else{
+                            w.precipitation = "";
+                    }
+                }
+                weatherInfoList.add(w);
+            } else {
+                // if this moment is in the range of 15 minutes from last checked moment, let it be the same as last checked weather info
+                weatherInfoList.add(new WeatherInfo(weatherInfoList.get(weatherInfoList.size()-1)));
+            }
+        }
         return weatherInfoList;
-    	
     }
 	
 	
@@ -195,19 +179,20 @@ public class WeatherDBReader {
            	// decide wind (3 levels)
    			if(!weatherInfo.windSpeed.equals("")){
    				if(Float.parseFloat(weatherInfo.windSpeed) <= 2.3){
-   	           		windSpeed = "calm";
+   	           		windSpeed = "no wind";
    	           	}else if(Float.parseFloat(weatherInfo.windSpeed) <= 6.7){
-   	           		windSpeed = "lightAir";
-   	           	}else if(Float.parseFloat(weatherInfo.windSpeed) <= 13.5){
    	           		windSpeed = "lightBreeze";
-   	           	}else{
+   	           	}else if(Float.parseFloat(weatherInfo.windSpeed) <= 13.5){
    	           		windSpeed = "gentleBreeze";
+   	           	}else{
+   	           		windSpeed = "wind";
    	           	}
    			}
            	eachWeatherTag.add(windSpeed);
           
            	if(!weatherInfo.precipitation.equals("")){
            		int amount = Integer.parseInt(weatherInfo.precipitation);	
+           		// if weatherInfo lack of temperature info, treat it as > 0
            		if(!weatherInfo.temperature.equals("")){
            			double temperature = Double.parseDouble(weatherInfo.temperature);
            			if(temperature<0){
@@ -220,7 +205,7 @@ public class WeatherDBReader {
            				}
            			}
            		}
-       			if(amount>40){
+           		if(amount>40){
        				precipitation = "heavy rain";
        			}else if(amount>20){
        				precipitation = "medium rain";
@@ -232,26 +217,24 @@ public class WeatherDBReader {
    		}else{
    			eachWeatherTag.add("");
    		}
-
-
    	} catch (Exception ex){
    		ex.printStackTrace();
-   	}
-   	
+   	}	
    	return eachWeatherTag;
    }
     
 
    public ArrayList<ArrayList<String>> weatherInfoToTag(ArrayList<WeatherInfo> weatherInfoList){
 	 ArrayList<ArrayList<String>> weatherTag = new ArrayList<ArrayList<String>>();
+	 // tag1 can be "" "" ""
    	 ArrayList<String> tag1 =  getEachWeatherTag(weatherInfoList.get(0));
    	    weatherTag.add(tag1);
+   	    // merge weather tag: if the current tag is "" "" "", set the value the same as last tag
    	    for(int i=1; i<weatherInfoList.size(); i++){
    	    	ArrayList<String> eachWeatherTag = new ArrayList<String>();
-   	    	
    	    	if(weatherInfoList.get(i).windSpeed.equals("") && weatherInfoList.get(i).precipitation.equals("") && weatherInfoList.get(i).temperature.equals("")){
    	    		eachWeatherTag = getEachWeatherTag(weatherInfoList.get(i-1));
-   	    		weatherInfoList.set(i, weatherInfoList.get(i-1));
+   	    		// weatherInfoList.set(i, weatherInfoList.get(i-1));
    	    	}else{
    	    		eachWeatherTag = getEachWeatherTag(weatherInfoList.get(i));
    	    	}

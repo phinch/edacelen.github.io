@@ -40,7 +40,7 @@ public class LocationManager2 {
 	 * @param fileName name of input file
 	 * @return input data in ArrayList [Latitude, Longitude, dateTime]
 	 */
-	public ArrayList<Location2> generateInputLocatiossFromFile(String[] inputFile){
+	public ArrayList<Location2> generateLocationsFromFile(String[] inputFile){
         ArrayList<Location2> inputLocation = new ArrayList<Location2>();
 
         try {
@@ -71,8 +71,11 @@ public class LocationManager2 {
 	 */
 	public ArrayList<ArrayList<Location2>> modePrediction(ArrayList<Location2> inputLocation){
 		ArrayList<ArrayList<Location2>> outputLocation = new ArrayList<ArrayList<Location2>>();
+		if (inputLocation == null || inputLocation.size() == 0){
+			return outputLocation;
+		}
+		
 		ArrayList<Location2> tempOutputLocation = new ArrayList<Location2>();
-	
 		// the final big map
 		// HashMap<String, String> modeMap = new HashMap<String, String>();
 		// store pre step "still" mode
@@ -87,14 +90,13 @@ public class LocationManager2 {
 		HashMap<String, ArrayList<Double>> coorMap = new HashMap<String, ArrayList<Double>>();
 		
 		// To get time period, distance, speed, and acceleration
-		int k = 0;
 		double preSpeed = 0;
 		double prePeriod = 0;
 		double acceleration = 0;
 		
 		
 		/*****************************************************************************************************
-         *	have 3 basic mode predictions: still -- walk -- others
+         *	use 3 basic mode predictions: still -- walk -- others
          *	put each preMode in preModeList
          * ***************************************************************************************************/  
 		//To store preMode (3 kinds) in a big List        
@@ -108,18 +110,17 @@ public class LocationManager2 {
 		String coor11 = "";		
 		double distance = 0;
 		double speed = 0;
-		
 		int i = 0;
 		int j = i+1;
+		int index = 0;
 		while(i<inputLocation.size()-1){		    			
-			k += 1;
+			index += 1;
 			// store coors in a map
 			ArrayList<Double> coor = new ArrayList<Double>();
 			coor.add(Double.parseDouble(inputLocation.get(j).latitude));
 			coor.add(Double.parseDouble(inputLocation.get(j).longitude));
 			coorMap.put(inputLocation.get(j).dateTime, coor);
-			
-			
+
 			ArrayList<String> preMode = new ArrayList<String>();
 			pretime = inputLocation.get(i).dateTime;
 			afttime = inputLocation.get(j).dateTime;
@@ -131,22 +132,16 @@ public class LocationManager2 {
 	    	distance = GetDistance(Double.parseDouble(coor00), Double.parseDouble(coor01), Double.parseDouble(coor10), Double.parseDouble(coor11));
 	        speed = 0;
 	        if (period != 0){
-	        	 speed = distance/period;       //speed   
+	        	 speed = distance/period;       
 	        }
-  	        
-	        if (k > 1){
+	        if (index > 1){
 	        	if (period != 0){
 	                acceleration = Math.abs((speed-preSpeed)/period);    
 	        	}
 	        }
 	        preSpeed = speed;
             prePeriod = period;
-            
-            
-            
-            // if speed>240 or acceleration>4.5, ignore this node 
-            // step 1: merge too large intervals
-            // else add [afttime	  period   distance	  speed	  acceleration		mode		lat		lng]
+            // if speed > 240 or acceleration > 4.5, ignore this node(outlier), else add [afttime, period, distance, speed, acceleration, mode, lat, lng]
             if(speed>240 || acceleration>4.5){
             	j++;
             }else{
@@ -154,28 +149,22 @@ public class LocationManager2 {
                 preMode.add(String.valueOf(period));
                 preMode.add(String.valueOf(distance));
                 preMode.add(String.valueOf(speed));
-                preMode.add(String.valueOf(acceleration)); 
-                 
-                j++;
-                i=j-1;
-                
-                // 3 prediction: still -- walk -- others
+                preMode.add(String.valueOf(acceleration));    
+                // predict form 3 choices: still -- walk -- others
                 String preModeString = preMode(distance, acceleration, speed, period);
                 preMode.add(preModeString);
                 preMode.add(coor10); 
-                preMode.add(coor11);
-                
+                preMode.add(coor11);            
                 // add preMode to preModeList
                 preModeList.add(preMode);
-            } 
-            
-		}  
-	 
-	    
+                j++;
+                i=j-1; 
+            }     
+		}     
         
         /*****************************************************************************************************
-         *	if consecutive still intervals is more 300 seconds, add "stillMerged"
-         *	put "stillMerged" intervals and each other interval into preSeg (ArrayList<ArrayList<String>>)
+         *	if consecutive still intervals is more 300 seconds, add "stillMerged" as a tag
+         *	put "stillMerged" intervals and all other mode intervals into preSeg (ArrayList<ArrayList<String>>)
          * ***************************************************************************************************/  
         ArrayList<ArrayList<String>> preSeg = new ArrayList<ArrayList<String>>();
         double sum = 0;
@@ -187,7 +176,7 @@ public class LocationManager2 {
         		sum = 0;
 	        	begin = i;
         		while(i<preModeList.size() && preModeList.get(i).get(5) == "still"){
-	        		sum +=  Double.parseDouble(preModeList.get(i).get(1));
+	        		sum += Double.parseDouble(preModeList.get(i).get(1));
 	        		i++;
 	        	}
 	        	end = i-1;
@@ -206,7 +195,6 @@ public class LocationManager2 {
 	        				modeTemp.add(preModeList.get(t).get(j));
 	        			}
 	        			preSeg.add(modeTemp);
-	        			
 	        		}
 	        	}
 	        	i--;
@@ -217,14 +205,9 @@ public class LocationManager2 {
     				modeTemp.add(preModeList.get(i).get(j));
     			}
         		preSeg.add(modeTemp);
-   
         	}
         	i++;
         }
-        
-        /**
-         * "11111"
-         */
         /*for(int r=0; r<preSeg.size(); r++){
         	System.out.println(preSeg.get(r));
         }*/
@@ -235,18 +218,17 @@ public class LocationManager2 {
          * Basic Mode Prediction
          * **************************************************************************************************
          * step 1: merge too small and too large intervals:
+         * 		   set too small and too large intervals' mode the same as its previous one, and add a "merge" tag in the end
          * 		   too small: 
-         * 					if (the mode still) set its mode the same as its forward interval
-         * 		   			if there is only one interval and it satisfies a or b,  merge it into "modeMap" and set its mode as "still" ;
-         * 					
+         * 					if this interval's mode is still, set its mode the same as its forward interval
+         * 		   			if there is only one interval,  merge it into "modeMap" and set its mode as "still" 		
          * 		   too large:
-         * 					if the speed is too large (larger than) set its mode the same as its previous interval
-         * 		   set these intervals' mode the same as its previous one, and add a "merge" tag in the end
+         * 					if the speed is too large set its mode the same as its previous interval	   
+         *		   
          * 
          * step 2: merge consecutive walk intervals
          * 		   if the time of the big interval is more than 5 min take it as a walk interval for certain
          * 		   
-         * 
          * step 3: […..still…..] ----trip----[…..still…..]---- trip ----[…..still…..]…………
          * 		   for each trip:
          * 				[…..walk …..] ----segment----[…..walk …..]---- segment ----[…..walk...]………
@@ -291,7 +273,6 @@ public class LocationManager2 {
                 				break;
                 			}
         				}
-        				
         			}
         			if(flag){
         				ArrayList<String> key = new ArrayList<String>();
@@ -304,8 +285,6 @@ public class LocationManager2 {
         			}
         		}
         	}
-        	
-        	
         	// size == 2 ---> time+"stillMerged"
         	if(preSeg.get(i).size() != 4){
         		if(preSeg.get(i).get(5)=="still"){
@@ -318,15 +297,13 @@ public class LocationManager2 {
         			}
         		}
         	}
-        	
         }
-        
         /*for(ArrayList<String> a: stillLocationMap.keySet()){
         	System.out.println(a);
         	System.out.println(stillLocationMap.get(a));
         }*/
         
-        // get which location is "home"
+        // decide which location is "home"
         // coorPeriod {[lat, lng] --> [period1(total periods in this location), period2(add up each period between start time of interval and 23:59)]}
         HashMap<ArrayList<String>, ArrayList<Double>> coorPeriod = new HashMap<ArrayList<String>, ArrayList<Double>>();
         for(ArrayList<String> a: stillLocationMap.keySet()){
@@ -347,7 +324,7 @@ public class LocationManager2 {
         	}
         }
         
-        // get the one with longest totalPeriod1 -- home
+        // let the one with longest totalPeriod be home
         double longestTempTotalPeriods = 0;
         ArrayList<String> home = new ArrayList<String>();
         for(ArrayList<String> a: coorPeriod.keySet()){
@@ -368,23 +345,17 @@ public class LocationManager2 {
         	if(getPeriod(tempIntervals[0], tempIntervals[1])>=18000){
         		homeIntervals.add(tempHomeIntervals.get(r));
         	}
-        	
         }
          System.out.println(home);
          System.out.println(homeIntervals);
         
-       
         
-        
-        
-        
-        
-        //****************************************************
+        //***********************************************************************************
         // step 2
-        // merge consecutive walk intervals -- if period >= 5min, -- merge them together 
+        // merge consecutive walk intervals -- if period >= 5min, -- merge them
         // if merged, mode is "walkMerged", [time, period, distance, speed, mode]
         // put all merged and unmerged into mergedSeg (ArrayList<ArrayList<String>>)
-        //****************************************************
+        //***********************************************************************************
         ArrayList<ArrayList<String>> mergedSeg = new ArrayList<ArrayList<String>>();
         double sumPeriod = 0;
         double sumDistance = 0;
@@ -420,7 +391,7 @@ public class LocationManager2 {
         				temp2.add("walkMerged");
         				mergedSeg.add(temp2);
         			}else{
-        				for (k=begin; k<=end; k++){
+        				for (int k=begin; k<=end; k++){
         					mergedSeg.add(preSeg.get(k));
         				}
         			}
@@ -433,25 +404,17 @@ public class LocationManager2 {
         	}
         	i++;
         }
-        /**
-         * "22222"
-         */
         /*for(int r=0; r<mergedSeg.size(); r++){
         	System.out.println(mergedSeg.get(r));
         }*/
         
-        
-        
-        
-        
-        //****************************************************
+        //***************************************************************************************************************
         // step 3 predict mode
         // ignore intervals with "merge" tag
         // get mean speed, 3 largest accelerations and get their mean？
         // put final mode predictions of merged and unmerged intervals into modePrediction (ArrayList<ArrayList<String>>)
-        //****************************************************
-        ArrayList<ArrayList<String>> modePrediction = new ArrayList<ArrayList<String>>();
-        
+        //***************************************************************************************************************
+        ArrayList<ArrayList<String>> modePrediction = new ArrayList<ArrayList<String>>(); 
         double sumSpeed = 0;
         double meanSpeed = 0;
         ArrayList<Double> largestAcc = new ArrayList<Double>();
@@ -505,17 +468,10 @@ public class LocationManager2 {
         		modePrediction.add(temp);
         	}
         	i++;
-        	
         }
-        /**
-         * "33333"
-         */
         /*for(int r=0; r<modePrediction.size(); r++){
         	System.out.println(modePrediction.get(r));
-        }*/
-       
-        
-        
+        }*/ 
         
         //****************************************************
         //step 4: remove outliers and integrate intervals
@@ -536,7 +492,7 @@ public class LocationManager2 {
             	}
         	}      	
         	
-        	// ignore coordinates with abnormal speed according to its mode (Eg. in "vehicle", speed is 177m/s -- 2015-03-28 17:21:43)
+        	// ignore locations with abnormal speed according to its mode (i.e. in "vehicle", speed is 177m/s -- 2015-03-28 17:21:43)
         	// only care about "speed" of a single interval 
         	double tempSpeed = 0;
         	if (modePrediction.get(j).get(1) == "still"){
@@ -599,8 +555,7 @@ public class LocationManager2 {
         				tempSpeed  = GetDistance(coorMap.get(preModeList.get(start).get(0)).get(0), coorMap.get(preModeList.get(start).get(0)).get(1), coorMap.get(preModeList.get(i).get(0)).get(0), coorMap.get(preModeList.get(i).get(0)).get(1)) / getPeriod(preModeList.get(start).get(0),  preModeList.get(i).get(0)) ;
         			}
         		}
-        	}
-        			
+        	}      			
         	// [time, lat, log, mode] in 	Location2  eachOutputLocation 
         	Location2 eachOutputLocation = new Location2();
         	eachOutputLocation.latitude = String.valueOf(coorMap.get(preModeList.get(i).get(0)).get(0));
@@ -610,24 +565,18 @@ public class LocationManager2 {
         	/*if(!eachOutputLocation.mode.equals("still")){
         		System.out.println(eachOutputLocation);
         	}*/
-        	
         	tempOutputLocation.add(eachOutputLocation); 
         }
-        /**
-         * "44444"
-         */
         /*
         for(int r=0; r<tempOutputLocation.size(); r++){
         	System.out.println(tempOutputLocation.get(r));
         }
         */
         
-        
         // ignore "still" locations
         // integrate tempOutputLocation and homeIntervals
         ArrayList<Location2> tempResult = new ArrayList<Location2>();
-        int indexOfHomeIntervals = 0;
-        
+        int indexOfHomeIntervals = 0; 
         for(int r=0; r<tempOutputLocation.size(); r++){
         	if(!tempOutputLocation.get(r).mode.equals("still")){
         		if(indexOfHomeIntervals < homeIntervals.size()){
@@ -641,7 +590,6 @@ public class LocationManager2 {
             		}
             		r--;
             		indexOfHomeIntervals++;
-            		
             		outputLocation.add(tempResult);
         		}else{
         			tempResult = new ArrayList<Location2>();
@@ -655,14 +603,9 @@ public class LocationManager2 {
         			outputLocation.add(tempResult);
         		}
         	}
-        }
-        
-        
+        }        
         return  outputLocation;
-	}
-	
-
-		        
+	}        
 		        
     /***
      * get samples from output locations
@@ -674,65 +617,54 @@ public class LocationManager2 {
      * @return samplesFromOutputLocations samples from output locations
      */
 	public ArrayList<Location2> getSamplesFromOutputLocations(ArrayList<Location2> outputLocation){
-				int i=0;
-				int size = outputLocation.size();
-		        ArrayList<Location2> samplesFromOutputLocations = new ArrayList<Location2>();
-		        double distance = 0;
-		        String mode = "";
-		        while(i<size-2){
-		        	if(outputLocation.get(i).mode.equals("still")){
-		        		Location2 eachSample = new Location2();
-		        		eachSample.latitude = outputLocation.get(i).latitude;
-		        		eachSample.longitude = outputLocation.get(i).longitude;
-		        		eachSample.dateTime = outputLocation.get(i).dateTime;
-		        		eachSample.mode = outputLocation.get(i).mode;
-		        		
-		        		samplesFromOutputLocations.add(eachSample);
-		        		while(i<size-2 && outputLocation.get(i).mode.equals("still")){
-		        			i++;
-		        		}
-		        		i--;
-		        	}else{
-		        		if(outputLocation.get(i).mode.equals("walk")){
-			        		distance = 50;
-			        		mode = "walk";			        		
-				        	
-			        	}else if(outputLocation.get(i).mode.equals("run")){
-			        		distance = 50;
-			        		mode = "run";		        		
-				        	
-			        	}else if (outputLocation.get(i).mode.equals("vehicle")){
-			        		distance = 250;
-			        		mode = "vehicle";			        		
-			        		
-			        	}else if (outputLocation.get(i).mode.equals("plane")){
-			        		distance = 1000;
-			        		mode = "plane";
-
-			        	}
-		        		
-		        		i = extractSamples(i, samplesFromOutputLocations, outputLocation, mode, distance);
-		        		i--;
-		        		
-		        	}
-		        	
-		        	i++;
-		        	
-		        }
-		        
-		        //add the last node
-		        Location2 eachSample = new Location2();
-		        
-				eachSample.latitude = outputLocation.get(i+1).latitude;
-				eachSample.longitude = outputLocation.get(i+1).longitude;
-				eachSample.dateTime = outputLocation.get(i+1).dateTime;
-				eachSample.mode = outputLocation.get(i+1).mode;
-				
-		        return samplesFromOutputLocations;
+		ArrayList<Location2> samplesFromOutputLocations = new ArrayList<Location2>();
+		if (outputLocation == null || outputLocation.size() == 0){
+			return samplesFromOutputLocations;
+		}
+		int i=0;
+		int size = outputLocation.size();
+        double distance = 0;
+        String mode = "";
+        while(i<size-2){
+        	if(outputLocation.get(i).mode.equals("still")){
+        		Location2 eachSample = new Location2();
+        		eachSample.latitude = outputLocation.get(i).latitude;
+        		eachSample.longitude = outputLocation.get(i).longitude;
+        		eachSample.dateTime = outputLocation.get(i).dateTime;
+        		eachSample.mode = outputLocation.get(i).mode;
+        		samplesFromOutputLocations.add(eachSample);
+        		while(i<size-2 && outputLocation.get(i).mode.equals("still")){
+        			i++;
+        		}
+        		i--;
+        	}else{
+        		if(outputLocation.get(i).mode.equals("walk")){
+	        		distance = 50;
+	        		mode = "walk";			        		
+	        	}else if(outputLocation.get(i).mode.equals("run")){
+	        		distance = 50;
+	        		mode = "run";		        		
+	        	}else if (outputLocation.get(i).mode.equals("vehicle")){
+	        		distance = 250;
+	        		mode = "vehicle";			        		
+	        	}else if (outputLocation.get(i).mode.equals("plane")){
+	        		distance = 1000;
+	        		mode = "plane";
+	        	}		        		
+        		i = extractSamples(i, samplesFromOutputLocations, outputLocation, mode, distance);
+        		i--;		        		
+        	}		        	
+        	i++;
+        } 
+        //add the last node
+        Location2 eachSample = new Location2();
+		eachSample.latitude = outputLocation.get(i+1).latitude;
+		eachSample.longitude = outputLocation.get(i+1).longitude;
+		eachSample.dateTime = outputLocation.get(i+1).dateTime;
+		eachSample.mode = outputLocation.get(i+1).mode;
+        return samplesFromOutputLocations;
 	}
-	
-	
-	
+		
 	/**
 	 * 
 	 * @param i index of outputLocation
@@ -745,96 +677,83 @@ public class LocationManager2 {
 	public int extractSamples(int i, ArrayList<Location2> samplesOfSameMode, ArrayList<Location2> outputLocation, String mode, Double distance){
 		int size = outputLocation.size();
         double dist = 0;
-        Location2 eachSample = new Location2();
-        
+        Location2 eachSample = new Location2();  
         // add the first point of a new mode
 		eachSample = new Location2();
 		eachSample.latitude = outputLocation.get(i).latitude;
 		eachSample.longitude = outputLocation.get(i).longitude;
 		eachSample.dateTime = outputLocation.get(i).dateTime;
-		eachSample.mode = outputLocation.get(i).mode;
-        
+		eachSample.mode = outputLocation.get(i).mode;  
 		samplesOfSameMode.add(eachSample);
-
 		dist = 0;
-		while(i<size-2 && outputLocation.get(i).mode.equals(mode)){
-			
+		while(i<size-2 && outputLocation.get(i).mode.equals(mode)){		
 			if(dist < distance){
 				// distance between Pi & Pi+1
-    			dist += GetDistance(Double.parseDouble(outputLocation.get(i).latitude), Double.parseDouble(outputLocation.get(i).longitude), Double.parseDouble(outputLocation.get(i+1).latitude), Double.parseDouble(outputLocation.get(i+1).longitude));
-    			
-    		}else{
-    			
+    			dist += GetDistance(Double.parseDouble(outputLocation.get(i).latitude), Double.parseDouble(outputLocation.get(i).longitude), Double.parseDouble(outputLocation.get(i+1).latitude), Double.parseDouble(outputLocation.get(i+1).longitude));		
+    		}else{    			
         		if(outputLocation.get(i+1).mode.equals(mode)){
         			eachSample = new Location2();
         			eachSample.latitude = outputLocation.get(i+1).latitude;
         			eachSample.longitude = outputLocation.get(i+1).longitude;
         			eachSample.dateTime = outputLocation.get(i+1).dateTime;
-        			eachSample.mode = outputLocation.get(i+1).mode;
-        			
+        			eachSample.mode = outputLocation.get(i+1).mode;       			
         			samplesOfSameMode.add(eachSample);
         		}
         		dist = 0;	
-
     		}
 			i++;
 		}
-		return i;
-		
+		return i;		
 	}
 	
 	
 	/**
-	 * get reserved intervals based on surrounding feature and weather condition
-	 * @param samplesFromOutputLocations samples to filter
+	 * get interesting intervals from interesting locations database and weather database
+	 * @param interestingsamplesIndex
 	 * @param surroundingDatabase surrounding Database
 	 * @param outputLocation ouputted location (object Location2)
-	 * @return all reserved intervals in order of time (object Location2)
-	 * 1. get reseved samples' indices
+	 * @return all interesting intervals in order of time (object Location2)
+	 * 1. get interesting samples' indices
 	 * 2. get start and end Of intervals to be rewound
 	 * 3. get all intervals to be rewound from outputlocations
 	 * 
 	 */
-	public ArrayList<Location2> getReservedIntervals(ArrayList<Integer> samplesIndexReserved, ArrayList<Location2>samplesFromOutputLocations, ArrayList<Location2> outputLocation){
-		
-		// get start and end time of intervals
-	    ArrayList <String> startsAndEndsOfIntervals = this.getStartAndEndOfSubIntervels(samplesIndexReserved, samplesFromOutputLocations);	    
-
-	    ArrayList<Location2> reservedIntervals = getAllLocationsExtrated(startsAndEndsOfIntervals, outputLocation);
-	    
-		return reservedIntervals;
-	}
-	
-	
-	
+	public ArrayList<Location2> getInterestingIntervals(ArrayList<Integer> interestingsamplesIndex, ArrayList<Location2>samplesFromOutputLocations, ArrayList<Location2> outputLocation){	
+		ArrayList<Location2> interestingIntervals =  new ArrayList<Location2>();
+		// if no location in this trip is found in the database
+		if (interestingsamplesIndex == null || interestingsamplesIndex.size() == 0){
+			return interestingIntervals;
+		}
+	    ArrayList <String> startsAndEndsOfIntervals = this.getStartAndEndOfSubIntervels(interestingsamplesIndex, samplesFromOutputLocations);	    
+	    interestingIntervals = getAllLocationsExtrated(startsAndEndsOfIntervals, outputLocation);   
+		return interestingIntervals;
+	}	
 	 
 	/**
-	 * get reserved Samples from OutputLocation
+	 * get interesting Samples from OutputLocation
 	 * @param  samplesFromOutputLocations samplesFromOutputLocations
-	 * @param reservedSampleIndicesFromOutputLocation reservedSampleIndicesFromOutputLocation
-	 * @return reserved Samples from OutputLocation
+	 * @param interestingSampleIndicesFromOutputLocation reservedSampleIndicesFromOutputLocation
+	 * @return interestingSamplesFromOutputLocations
 	 */
-	public ArrayList<Location2> getReservedSamples(ArrayList<Location2> samplesFromOutputLocations, ArrayList<Integer> reservedSampleIndicesFromOutputLocation){
-		ArrayList<Location2> reservedSamplesFromOutputLocations  = new ArrayList<Location2>();
-		for(int i: reservedSampleIndicesFromOutputLocation){
-			reservedSamplesFromOutputLocations.add(samplesFromOutputLocations.get(i));
+	public ArrayList<Location2> getInterestingSamples(ArrayList<Location2> samplesFromOutputLocations, ArrayList<Integer> interestingSampleIndicesFromOutputLocation){
+		ArrayList<Location2> interestingSamplesFromOutputLocations  = new ArrayList<Location2>();
+		for(int i: interestingSampleIndicesFromOutputLocation){
+			interestingSamplesFromOutputLocations.add(samplesFromOutputLocations.get(i));
 		}
-		return reservedSamplesFromOutputLocations;
+		return interestingSamplesFromOutputLocations;
 	}
-    
-
+	
 	
 	/**
 	 * get start location2 object and end location2 object of all sub intervals
 	 * ^*^*^*^... ----> pick ^ to test, two adjacent * are bounds of effective intervals
-	 * @param samplesIndexReserved index of reserved samples in samplesFromOutputLocations
+	 * @param interestingsamplesIndex index of interesting samples in samplesFromOutputLocations
 	 * @param samplesFromOutputLocations samplesFromOutputLocations
 	 * @return start and end (location2 object) of all sub intervals
 	 */
-	public ArrayList<String> getStartAndEndOfSubIntervels(ArrayList<Integer>samplesIndexReserved, ArrayList<Location2>samplesFromOutputLocations){
+	public ArrayList<String> getStartAndEndOfSubIntervels(ArrayList<Integer>interestingsamplesIndex, ArrayList<Location2>samplesFromOutputLocations){
 		ArrayList<String> intervalsExtrated = new ArrayList<String>();
-		
-	    for(int i: samplesIndexReserved){
+	    for(int i: interestingsamplesIndex){
 	    	// add start dateTime
 	    	if(i == 0){
 	    		intervalsExtrated.add(samplesFromOutputLocations.get(i).dateTime);    		
@@ -847,13 +766,11 @@ public class LocationManager2 {
 			}else{
 				intervalsExtrated.add(samplesFromOutputLocations.get(i).dateTime);
 			}		
-	    }
-	    
+	    }	    
 	    //System.out.println(intervalsExtrated.size());
 		return intervalsExtrated;
 	}
 	   
-	
 	
 	/**
 	 * extract all Location2 objects from outputLocation
@@ -861,29 +778,25 @@ public class LocationManager2 {
 	 * @param outputLocation all location2 objects in outputLocation
 	 * @return all Location2 objects extrated
 	 */
-	public ArrayList<Location2> getAllLocationsExtrated(ArrayList<String>ReservedIntervals, ArrayList<Location2> outputLocation){
+	public ArrayList<Location2> getAllLocationsExtrated(ArrayList<String>startsAndEndsOfIntervals, ArrayList<Location2> outputLocation){
 		ArrayList <Location2> Extratedpoints = new ArrayList <Location2>();
-		
 	    int j=0;
 	    String start = "";
 	    String end = "";
 		for(Location2 l2 : outputLocation){ 
-			if(j<ReservedIntervals.size()){
-				start = ReservedIntervals.get(j);
-				end = ReservedIntervals.get(j+1);
+			if(j < startsAndEndsOfIntervals.size()){
+				start = startsAndEndsOfIntervals.get(j);
+				end = startsAndEndsOfIntervals.get(j+1);
 				if(LocationManager2.getPeriod(start,l2.dateTime)>=0){
 					if(LocationManager2.getPeriod(l2.dateTime, end)>=0){
-	
 						Extratedpoints.add(l2);
 					}else{
 						j += 2;
 					}
 				}
 			}
-			
 		}
-			//System.out.println(Extratedpoints.size());
-		
+		//System.out.println(Extratedpoints.size());
 		return Extratedpoints;
 	}
 	
@@ -907,7 +820,6 @@ public class LocationManager2 {
             //ms
             diff = d2.getTime() - d1.getTime();
             //System.out.println(diff / 1000);	//seconds
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -992,6 +904,4 @@ public class LocationManager2 {
 		s = s * EARTH_RADIUS;
 	    return s*1000;
 	}
-	
-
 }
