@@ -112,17 +112,19 @@ $(function() {
             }
         };
 
-        getRouteFromDirectionsService(route.request, 3, function(err, response) {
-            if (err) {
-                throw Error("Direction Service request failed for: " + JSON.stringify(err));
-            }
+        setTimeout(function() { 
+            getRouteFromDirectionsService(route.request, 5, function(err, response) {
+                if (err) {
+                    throw Error("Direction Service request failed for: " + JSON.stringify(err));
+                }
 
-            results[i] = response;
+                results[i] = response;
 
-            if (_.compact(results).length == routes.length) {
-                onFinished();
-            }
-        });
+                if (_.compact(results).length == routes.length) {
+                    onFinished();
+                }
+            });
+        }, 100 * i);
     }
 
     function getRouteFromDirectionsService(request, retry, callback) {
@@ -135,7 +137,7 @@ $(function() {
                 if (retry > 0) {
                     setTimeout(function() { 
                         getRouteFromDirectionsService(request, retry - 1, callback); 
-                    }, 200);
+                    }, 100 * (1 /retry));
                 } else {
                     console.log(status);
                     callback(status, null);
@@ -240,30 +242,197 @@ $(function() {
         // return [0.5, 0.5];
     }
 
+
+ 
+    var messages = document.getElementById("messages");
+
+    /**
+     * Sends the value of the text input to the server
+     */
+    function send(){
+        var text = document.getElementById("messageinput").value;
+        webSocket.send(text);
+    }
+
+    function closeSocket(){
+        webSocket.close();
+    }
+
+    function writeResponse(text){
+        messages.innerHTML += "<br/>" + text;
+    }
+
+    function onMessage(evt) {
+        console.log("received: " + evt.data);
+        writeResponse(evt.data);
+    }
+
+    // dragdrop
     var dragArea = document.getElementById('file-drop-area');
     dragArea.ondragover = function () { this.className = 'dragging'; return false; };
     dragArea.ondragend = dragArea.ondragleave = function () { this.className = ''; return false; };
     dragArea.ondrop = function (e) {
         this.className = '';
         e.preventDefault();
-        handleUploadedFile(e.dataTransfer.files[0]);
+        loadFile(e.dataTransfer);
     }
-
+    // upload
     var fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', function(e) {
-        handleUploadedFile(fileInput.files[0]);
+        loadFile(fileInput);
     });
+    function loadFile(input) {
+        var file, fr;
 
-    function handleUploadedFile(file) {
-        $("#upload-wrapper").html("<img src='img/loading.gif' style='width:50px; margin: 20px 275px'></img>");
+        if (typeof window.FileReader !== 'function') {
+          alert("The file API isn't supported on this browser yet.");
+          return;
+        }
 
-        var reader = new FileReader();
+        if (!input) {
+          alert("Um, couldn't find the fileinput element.");
+        }
+        else if (!input.files) {
+          alert("This browser doesn't seem to support the `files` property of file inputs.");
+        }
+        else if (!input.files[0]) {
+          alert("Please select a file before clicking 'Load'");
+        }
+        else {
+            // conect to websocket
+            connectChatServer();
 
-        reader.readAsText(file);
-        reader.addEventListener('load', function(e) {
-            processLocationExport(reader.result);
-        });
+            file = input.files[0];
+
+            fr = new FileReader();
+            fr.onload = receivedText;
+            fr.readAsText(file);
+        }
     }
+
+    function connectChatServer() {
+        webSocket = new WebSocket("ws://localhost:8080/WebApplication3/newEndpoint");
+
+        // Called when the connection to the server is opened.
+        webSocket.onopen = function(event){
+            alert("Connection with server open.");
+        };
+
+        // When the server is sending data to this socket, this method is called
+        webSocket.onmessage = function(event){
+            var data = event.data;
+            writeResponse(data);
+        };
+
+        // Called when the connection to the server is closed.
+        webSocket.onclose = function() {
+            alert("Connection is closed...");
+        };
+
+        webSocket.onerror = function(event) {
+            alert(event.msg);
+        }
+    }
+
+    function receivedText(e) {     
+        lines = e.target.result;
+        var line = JSON.parse(lines); 
+        var content = line.locations;
+        var i = 0;
+        var locations = [];
+
+        for(index = 0; index < content.length; index++) {
+            text = content[index];
+            //console.log(text);
+            for(key in text){
+                if(key == "accuracy"){
+                    if(text.accuracy > 10){
+                    // time
+                    var timestamp = text.timestampMs;
+                    var d = new Date(+timestamp);
+                    var formattedDate = d.getFullYear()+ "-" + (d.getMonth() + 1) + "-" + d.getDate();
+                    var hours = (d.getHours() < 10) ? "0" + d.getHours() : d.getHours();
+                    var minutes = (d.getMinutes() < 10) ? "0" + d.getMinutes() : d.getMinutes();
+                    var seconds = (d.getSeconds() < 10) ? "0" + d.getSeconds() : d.getSeconds();
+                    var formattedTime = hours + ":" + minutes + ":" + seconds;
+
+                    formattedDate = formattedDate + " " + formattedTime;
+                    //document.write(text.timestampMs);
+                    //console.log(formattedDate);
+
+                    // latitude
+                    var latitude = parseInt(text.latitudeE7,10)/10000000;
+                    //console.log(latitude);
+
+                    // longitude
+                    var longitude = parseInt(text.longitudeE7,10)/10000000;
+                    //console.log(longitude);
+
+                    // put lat, lng, time into an array
+                    var line = latitude+","+longitude+","+formattedDate;
+                    //console.log(line);
+                    locations[i] = line;
+                    i++;
+                    } 
+                }
+            }
+        }
+        invertedLocations = "";
+        for(index1 = locations.length-1; index1 >= 0; index1--){
+            // invserse the list
+            invertedLocations += locations[index1];
+            invertedLocations += ";";
+        }
+        
+        var lastResponse = null;
+        //console.log(invertedLocations);
+        webSocket.send(invertedLocations);
+        // Called when the connection to the server is closed.
+        webSocket.onclose = function() {
+            handleServerResponse(lastResponse);
+        };
+        webSocket.onmessage = function(evt){ 
+            console.log("Received from server:", evt.data);
+            lastResponse = evt.data;
+        };                
+    }
+
+    var processed = false;
+    function handleServerResponse(response) {
+        // DO SOMETHING WITH THE RESPONSE
+        console.log("handleServerResponse!!!!!");
+        if (response !== "" && !processed){
+            var singleTrip = parseLocationsCsv(response);
+            // console.log(singleTrip);
+            // generateRewindSurvey(singleTrip);
+            processLocationExport(singleTrip);
+            processed = true;
+        }
+        
+    }
+
+    function parseLocationsCsv(csv) {
+        //var lines = csv.split(/\r?\n/);
+        var lines = csv.split(";");
+        var results = [];
+
+        lines.forEach(function(line, i) {
+            var parts = line.split(",");
+
+            var lat    = parseFloat(parts[0]);
+            var lon    = parseFloat(parts[1]);
+            var timeMs = parseInt(parts[2]);
+            
+            results.push({
+                latitude: lat,
+                longitude: lon,
+                millis: timeMs
+            });
+        });
+        //console.log(results.length);
+        return results;
+    }
+
 
     function isWinter(month, lat) {
         var absLat = Math.abs(parseInt(lat));
@@ -391,6 +560,10 @@ $(function() {
         });
     }
 
+
+
+    
+    
     function getRandomLocations(locationsByDate, count) {
         var randLocations = [];
         var i = 0;
@@ -411,18 +584,20 @@ $(function() {
         return randLocations;
     }
 
+
     function getMonth(dateString) {
     	return dateString.split("/")[0];
     }
 
-    function processLocationExport(fileContents) {
-        locationsByDate = parseLocationJson(fileContents);
+    function processLocationExport(trips) {
+        locationsByDate = parseLocationInputFromServer(trips);
 
         $("#upload-wrapper").hide();
 
         var imageIndex = 0;
         var imageCount = 10;
         var locations = getRandomLocations(locationsByDate, imageCount);
+        // console.log(locations);
         //var urls = generateStreetViewUrls(locations, false);
         var flatLocations = _.pluck(locations, "location");
 
@@ -504,6 +679,7 @@ $(function() {
             $(this).addClass("loading-hyperlapse");
             var $img = $(this).find(".location")
             var locations = getLocationsOnDate($img.attr("data-date"));
+            // var locations = trips[parseInt($img.attr("data-trip"))];
 
             var millis = $img.attr("data-millis");
             var lat = $img.attr("data-lat");
@@ -674,7 +850,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E&size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
             // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
@@ -715,5 +891,34 @@ $(function() {
 
         return results;
     };
-
+    
+    function parseLocationInputFromServer(input) {
+        // var obj = JSON.parse(locJson);
+        var results = {};
+        console.log(input);
+        // var eachRecord = input.split(";");
+        
+        input.forEach(function(location, i) {
+            var lat = location.latitude;
+            var lon = location.longitude;
+            var timeMs = parseInt(location.millis);
+            var date = moment(timeMs).format("MM/DD/YYYY");
+            // console.log(lat);
+            // console.log(lon);
+            // console.log(timeMs);
+            console.log(date);
+            if (!results[date]) {
+                results[date] = [];
+            }
+            results[date].push({
+                latitude: lat,
+                longitude: lon,
+                millis: timeMs
+            });
+        });
+        
+        return results;
+    }; 
+    
+    
 });
