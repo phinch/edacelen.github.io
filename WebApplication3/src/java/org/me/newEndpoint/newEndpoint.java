@@ -34,12 +34,14 @@ public class newEndpoint {
      */
     @OnOpen
     public void onOpen(Session session){
-        System.out.println(session.getId() + " has opened a connection"); 
+        // System.out.println(session.getId() + " has opened a connection"); 
+        /*
         try {
             session.getBasicRemote().sendText("Connection Established");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+        */
     }
  
     
@@ -72,6 +74,7 @@ public class newEndpoint {
                 session.getBasicRemote().sendText(processedTrip);
                 
             }
+            session.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }

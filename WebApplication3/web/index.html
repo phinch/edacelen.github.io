@@ -1,125 +1,77 @@
 <!DOCTYPE html>
+ 
 <html>
-<head>
-	<title>REWIND</title>
-<style type="text/css">
-body {
-	margin: 0;
-	padding: 0;
-	background-color: #fbfbfb;
-	overflow: hidden;
-	font-family: "Merriweather", serif; 
-	font-weight: 400;
-	color: #666;
-}
+    <head>
+        <title>A trip down the memory lane...</title> 
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+	
+    
+        <link href='http://fonts.googleapis.com/css?family=Merriweather:400,300,700&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" type="text/css" href="css/main.css">
+        <link rel="stylesheet" href="js/ext/jquery-ui-1.11.3/jquery-ui.css" />
 
-#survey-wrapper {
-	position: relative;
-	width: 100%;
-	padding: 20px 0px;
-	height: 450px;
-	background-color: #fff;
-	margin-top: 100px;
-	box-shadow: 0 0 20px rgba(0,0,0,.2);
-}
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E&v=3.exp&sensor=false" type="text/javascript"></script> 
+	<script src="js/ext/three.min.js"></script>
+	<!-- <script src="js/ext/GSVPano.js"></script>
+	<script src="js/ext/Hyperlapse.js"></script> -->
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenLite.min.js"></script>
+        <script src="js/ext/jquery.js"></script>
+        <script src="js/ext/jquery-visibility.js"></script>
+	<script src="js/ext/underscore.js"></script>
+        <script src="js/ext/jquery-ui-1.11.3/jquery-ui.min.js"></script>
+	<script src="js/ext/moment-with-locales.min.js"></script>
+	<script src="js/ext/moment-timezone-with-data.min.js"></script>
+	<script src="js/ext/StreetviewSequence.js"></script>
 
-#question-list {
-	width: 900px;
-}
+	<script src="js/ext/caman.full.js"></script>
+	
+	<script src="js/rewind.js"></script>
+        <!-- <script src="js/rewind-upload.js"></script> -->
+    </head> 
 
-.location-questions {
-	margin-top: auto;
-	height: 600px;
-}
+    
+    <body>
+               
+        <!-- Server responses get written here -->
+        <div id="messages"></div>
 
-.location-questions > ul {
-	font-size: 17px;
-}
+       
+        <!-- file upload -->
+        <!--<form id="jsonFile" name="jsonFile" enctype="multipart/form-data" method="post">-->
+            
+            <div id="survey-wrapper">
+                <div id="upload-wrapper" style="text-align:center;">
+                    <h1 style="color: #008fed">How much do you remember?</h1> 
+                    <div id="upload-area">
+                        Select a json file: <input type="file" id="fileInput">
+                    </div>
+                    
+                    OR
+                    <div id="file-drop-area">
+                            drag-n-drop here
+                    </div>
+                </div>
 
-.location-questions li {
-    margin-top: 50px;
-	margin-bottom: 50px;
-}
-
-.location-questions li input[type=radio] {
-}
-
-.location-questions li .qtext {
-	margin-bottom: 10px;
-}
-
-
-
-.qtext {
-    font-size: 20px;
-}
-
-#button-box {
-	position: relative;
-	margin: 0 auto;
-	width: 300px;
-	margin-top: -320px;
-	padding-left: 520px
-}
-
-#button-box button {
-	padding: 8px 16px;
-	margin-right: 40px;
-	border: none;
-	border-width: 1px;
-	border-color: #ccc;
-	border-style: double;
-	border-radius: 4px;
-	background-color: #009aff;
-	color: white;
-}
-
-#button-box button:last-of-type {
-	margin-right: 0px;
-}
-
-#button-box button:nth-child(2) {
-	background-color: white;
-	color: #009aff;
-}
-
-ul {
-    list-style-type: none;
-	margin-left: -40px;
-}
-
-</style>
-</head>
-<body style="text-align:center">
-	<div id="survey-wrapper">
-	    <h1 style="color: #008fed">REWIND: A trip down the memory lane...</h1> 
-		<div class='location-questions' id='q{{INDEX}}'>
-			<ul>
-				<li class='question'>
-					<div class='qtext'> Are you a frequent GPS user?</div>
-					<div class='qanswers'>
-						<input type='radio' name='gps_user' value='true'></input><span class='ans-label'> Yes</span>
-						<input type='radio' name='gps_user' value='false'></input><span class='ans-label'> No</span>
-					</div>
-				</li>
-				<li class='question'>
-					<div class='qtext'> How much do you travel?</div>
-					<div class='qanswers'>
-						<input type='radio' name='traveller' value='platinum'></input><span class='ans-label'> I travel quite a lot. Many times within a year.</span> <br/>
-						<input type='radio' name='traveller' value='gold'></input><span class='ans-label'> More than a couple of times per year.</span><br/>
-						<input type='radio' name='traveller' value='silver'></input><span class='ans-label'> About once or a couple of times per year.</span><br/>
-						<input type='radio' name='traveller' value='bronze'></input><span class='ans-label'> I don't travel much.</span>
-					</div>
-				</li>
-			</ul>
-			<div style='clear: both;'></div>
-		</div>
+                <div id="question-list"></div>
 		<div id="button-box">
-			<button onclick="location.href = 'rewind/index.html';"id="startButton" >Start</button>
+			<button id="backButton" style="visibility:hidden">Back</button>
+			<button id="submitButton" style="visibility:hidden">Submit</button>
+			<button id="nextButton" style="visibility:hidden">Next</button>
 			<div style="clear:both"></div>
 		</div>
-		<div style="clear:both"></div>
-	</div>
-    <div style="clear:both"></div>
-</body>
+                
+                <div style="clear:both"></div>
+            </div>
+        
+        <div style="clear:both"></div>
+     
+        
+     
+        
+        <!-- Script to utilize the WebSocket 
+        <script type="text/javascript" src="upload.js"></script>-->
+        
+    </body>
+    
 </html>

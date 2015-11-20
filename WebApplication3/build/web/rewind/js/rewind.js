@@ -112,17 +112,19 @@ $(function() {
             }
         };
 
-        getRouteFromDirectionsService(route.request, 3, function(err, response) {
-            if (err) {
-                throw Error("Direction Service request failed for: " + JSON.stringify(err));
-            }
+        setTimeout(function() { 
+            getRouteFromDirectionsService(route.request, 5, function(err, response) {
+                if (err) {
+                    throw Error("Direction Service request failed for: " + JSON.stringify(err));
+                }
 
-            results[i] = response;
+                results[i] = response;
 
-            if (_.compact(results).length == routes.length) {
-                onFinished();
-            }
-        });
+                if (_.compact(results).length == routes.length) {
+                    onFinished();
+                }
+            });
+        }, 100 * i);
     }
 
     function getRouteFromDirectionsService(request, retry, callback) {
@@ -135,7 +137,7 @@ $(function() {
                 if (retry > 0) {
                     setTimeout(function() { 
                         getRouteFromDirectionsService(request, retry - 1, callback); 
-                    }, 200);
+                    }, 100 * (1 /retry));
                 } else {
                     console.log(status);
                     callback(status, null);
@@ -313,7 +315,7 @@ $(function() {
 
         // Called when the connection to the server is opened.
         webSocket.onopen = function(event){
-            alert("Connection with server open.");
+            // alert("Connection with server open.");
         };
 
         // When the server is sending data to this socket, this method is called
@@ -381,23 +383,30 @@ $(function() {
             invertedLocations += locations[index1];
             invertedLocations += ";";
         }
+        
+        var lastResponse = null;
         //console.log(invertedLocations);
         webSocket.send(invertedLocations);
+        // Called when the connection to the server is closed.
+        webSocket.onclose = function() {
+            handleServerResponse(lastResponse);
+        };
         webSocket.onmessage = function(evt){ 
-            //console.log(evt.data);
-            //writeResponse(evt.data);
-            handleServerResponse(evt.data);
+            console.log("Received from server:", evt.data);
+            lastResponse = evt.data;
         };                
     }
 
+    var processed = false;
     function handleServerResponse(response) {
         // DO SOMETHING WITH THE RESPONSE
         console.log("handleServerResponse!!!!!");
-        if (response !== ""){
+        if (response !== "" && !processed){
             var singleTrip = parseLocationsCsv(response);
             // console.log(singleTrip);
             // generateRewindSurvey(singleTrip);
             processLocationExport(singleTrip);
+            processed = true;
         }
         
     }
@@ -841,7 +850,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E&size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
             // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");

@@ -565,7 +565,11 @@ public class LocationManager2 {
         	/*if(!eachOutputLocation.mode.equals("still")){
         		System.out.println(eachOutputLocation);
         	}*/
-        	tempOutputLocation.add(eachOutputLocation); 
+                
+                // not consider "plane" places for now
+                if (!eachOutputLocation.mode.equals("plane")) {
+        		tempOutputLocation.add(eachOutputLocation); 
+        	}
         }
         /*
         for(int r=0; r<tempOutputLocation.size(); r++){
