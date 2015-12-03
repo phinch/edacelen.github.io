@@ -1,6 +1,10 @@
 package create_db;
 
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
@@ -35,24 +39,24 @@ public class create_db {
 		//------------------------------get the connections------------------------------
 		//--save "surroundingsExtraced in db: Rewind_Surroudings, Collection: location"-
 		//*******************************************************************************
-/*		db = mongo.getDB("Rewind_Surroudings");
+		db = mongo.getDB("Rewind_Surroudings");
 		System.out.println(db.collectionExists("Rewind_Surroudings"));
 		System.out.println(db.getCollectionNames());
 		table = db.getCollection("location");
 		System.out.println(table.getCount());
 		//table.drop();
-*/		
+		
 		
 		//*******************************************************************************
 		//-------------------insert data(location)/ read from file-----------------------
 		//*******************************************************************************
-/*		BufferedReader br = null;
+		BufferedReader br = null;
 		BasicDBObject doc = new BasicDBObject();
 		try {
 
 			String sCurrentLine;
 
-			br = new BufferedReader(new FileReader("/Users/jiahui/Desktop/mongodb/location.txt"));
+			br = new BufferedReader(new FileReader("/opt/dbfiles/location.txt"));
 
 			while ((sCurrentLine = br.readLine()) != null) {
 				String[] s = sCurrentLine.split(" ");
@@ -66,12 +70,12 @@ public class create_db {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-*/
+
 		
 		//*******************************************************************************
 		//---------------------------create geospatial index-----------------------------
 		//*******************************************************************************
-//		table.ensureIndex(new BasicDBObject("loc", "2d"));
+		table.ensureIndex(new BasicDBObject("loc", "2d"));
 		
 		
 		
@@ -100,12 +104,12 @@ public class create_db {
 		//--save "Weather" in db: Rewind_Weather_us, Collection: weather_us"-
 		//--save "Weather"(only weather data in US) in db: Rewind_Weather_us, Collection: weather_us"-
 		//*******************************************************************************
-		db = mongo.getDB("Rewind_Weather_us");
+/*		db = mongo.getDB("Rewind_Weather_us");
 		System.out.println(db.collectionExists("Rewind_Weather_us"));
 		System.out.println(db.getCollectionNames());
 		table = db.getCollection("weather_us");
 		System.out.println(table.getCount());
-		
+*/		
 		
 		//*******************************************************************************
 		//-------------------insert data(location)/ read from file-----------------------
@@ -165,7 +169,7 @@ public class create_db {
 			-77.323381    38.9446366
 		 */
 		
-		
+/*		
 		String sLng = "-77.0475306";	Double dLng = new Double(sLng);
 		String sLat = "38.896329";		Double dLat = new Double(sLat);
 		double distance = 20/111.12;
@@ -182,7 +186,7 @@ public class create_db {
 			//System.out.println(cursor.next());
 		}
 		System.out.println(d);
-		
+*/		
 		
 /*		while(cursor.hasNext()){
 			//System.out.println("YES!");
