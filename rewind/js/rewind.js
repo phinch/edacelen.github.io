@@ -1,4 +1,6 @@
 $(function() {
+    var Caman = require('caman');
+
 	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
 	// For northern hemisphere only!
@@ -547,11 +549,26 @@ $(function() {
             $(image).attr("data-hour", hour);
             $(image).attr("data-localHour", localHour);
             
-            Caman(image, function() {
-                this.saturation(saturation);
-                this.exposure(exposure);
-                this.render(function() {
-                    // console.log("Image manipulation done.");
+            Caman.fromImage(image).then(function(caman) {
+                caman.attach(image);
+
+                var newImage = parent.childNodes[0];
+
+                // copy image attributes to canvas attributes
+                $(newImage).attr("class", $(image).attr("class"));
+                $(newImage).attr("data-date", $(image).attr("data-date"));
+                $(newImage).attr("data-millis", $(image).attr("data-millis"));
+                $(newImage).attr("data-lat", $(image).attr("data-lat"));
+                $(newImage).attr("data-lon", $(image).attr("data-lon"));
+                $(newImage).attr("data-saturation", $(image).attr("data-saturation"));
+                $(newImage).attr("data-exposure", $(image).attr("data-exposure"));
+                $(newImage).attr("data-hour", $(image).attr("data-hour"));
+                $(newImage).attr("data-localHour", $(image).attr("data-localHour"));
+
+                return caman.pipeline(function () {
+                    this.saturation(saturation);
+                    this.exposure(exposure);
+                }).then(function () {
                     if (callback)  {
                         callback(parent.childNodes[0]);
                     }
