@@ -313,7 +313,8 @@ $(function() {
     }
 
     function connectChatServer() {
-        webSocket = new WebSocket("ws://localhost:8080/WebApplication3/newEndpoint");
+        //webSocket = new WebSocket("ws://localhost:8080/WebApplication3/newEndpoint");
+        webSocket = new WebSocket("ws://http://rewind.cs.brown.edu/newEndpoint");
 
         // Called when the connection to the server is opened.
         webSocket.onopen = function(event){
