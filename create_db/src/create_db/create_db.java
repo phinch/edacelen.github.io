@@ -39,18 +39,18 @@ public class create_db {
 		//------------------------------get the connections------------------------------
 		//--save "surroundingsExtraced in db: Rewind_Surroudings, Collection: location"-
 		//*******************************************************************************
-		db = mongo.getDB("Rewind_Surroudings");
+/*		db = mongo.getDB("Rewind_Surroudings");
 		System.out.println(db.collectionExists("Rewind_Surroudings"));
 		System.out.println(db.getCollectionNames());
 		table = db.getCollection("location");
 		System.out.println(table.getCount());
 		//table.drop();
-		
+*/		
 		
 		//*******************************************************************************
 		//-------------------insert data(location)/ read from file-----------------------
 		//*******************************************************************************
-		BufferedReader br = null;
+/*		BufferedReader br = null;
 		BasicDBObject doc = new BasicDBObject();
 		try {
 
@@ -70,12 +70,12 @@ public class create_db {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
+*/
 		
 		//*******************************************************************************
 		//---------------------------create geospatial index-----------------------------
 		//*******************************************************************************
-		table.ensureIndex(new BasicDBObject("loc", "2d"));
+		//table.ensureIndex(new BasicDBObject("loc", "2d"));
 		
 		
 		
@@ -104,23 +104,23 @@ public class create_db {
 		//--save "Weather" in db: Rewind_Weather_us, Collection: weather_us"-
 		//--save "Weather"(only weather data in US) in db: Rewind_Weather_us, Collection: weather_us"-
 		//*******************************************************************************
-/*		db = mongo.getDB("Rewind_Weather_us");
+		db = mongo.getDB("Rewind_Weather_us");
 		System.out.println(db.collectionExists("Rewind_Weather_us"));
 		System.out.println(db.getCollectionNames());
 		table = db.getCollection("weather_us");
 		System.out.println(table.getCount());
-*/		
+		
 		
 		//*******************************************************************************
 		//-------------------insert data(location)/ read from file-----------------------
 		//*******************************************************************************
-/*		BufferedReader br = null;
+		BufferedReader br = null;
 		BasicDBObject doc = new BasicDBObject();
 		try {
 
 			String sCurrentLine;
 
-			br = new BufferedReader(new FileReader("/Users/jiahui/Desktop/mongodb/USWeather.txt"));
+			br = new BufferedReader(new FileReader("/opt/dbfiles/USWeather.txt"));
 
 			while ((sCurrentLine = br.readLine()) != null) {
 				String[] s = sCurrentLine.split(" ");
@@ -138,14 +138,14 @@ public class create_db {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-*/		
+		
 		
 		
 		//*******************************************************************************
 		//---------------------------create geospatial index-----------------------------
 		//*******************************************************************************	
-//		table.dropIndexes();
-//		table.ensureIndex(new BasicDBObject("loc", "2d").append("precipitation", 1).append("dateTime", 1));
+		table.dropIndexes();
+		table.ensureIndex(new BasicDBObject("loc", "2d").append("precipitation", 1).append("dateTime", 1));
 
 
 		
