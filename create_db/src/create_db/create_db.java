@@ -110,6 +110,7 @@ public class create_db {
 		table = db.getCollection("weather_us");
 		System.out.println(table.getCount());
 		
+
 		
 		//*******************************************************************************
 		//-------------------insert data(location)/ read from file-----------------------
