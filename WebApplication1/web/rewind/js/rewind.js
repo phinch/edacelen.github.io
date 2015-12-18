@@ -57,7 +57,7 @@ $(function() {
                     $(pano.parentNode).find('.location').hide();
                     $(pano.parentNode).find('.loading-gif').hide();
                     player.play();
-                    ambiance = new Audio("./audio/thunder.mp3");
+                    ambiance = new Audio("./audio/CarDriving.mp3");
                     ambiance.play();
 
                     //when cursor is on rewind video
@@ -303,9 +303,7 @@ $(function() {
         else {
             // conect to websocket
             connectChatServer();
-
             file = input.files[0];
-
             fr = new FileReader();
             fr.onload = receivedText;
             fr.readAsText(file);
@@ -313,12 +311,16 @@ $(function() {
     }
 
     function connectChatServer() {
-        //webSocket = new WebSocket("ws://localhost:8080/WebApplication3/newEndpoint");
-        webSocket = new WebSocket("ws://http://rewind.cs.brown.edu/newEndpoint");
+        // webSocket = new WebSocket("ws://localhost:8080/WebApplication/newEndpoint");
+        webSocket = new WebSocket("ws://rewind.cs.brown.edu/app/newEndpoint");
 
         // Called when the connection to the server is opened.
+          
         webSocket.onopen = function(event){
-            alert("Connection with server open.");
+            console.log("ready state is: ");
+            console.log(webSocket.readyState);
+            console.log("Connection established!");
+            // alert("Connection with server open."); 
         };
 
         // When the server is sending data to this socket, this method is called
@@ -387,19 +389,55 @@ $(function() {
             invertedLocations += ";";
         }
         
+        
         var lastResponse = null;
-        //console.log(invertedLocations);
-        webSocket.send(invertedLocations);
+        // console.log(invertedLocations);
+        try {
+            // webSocket.send(invertedLocations);                
+            waitForSocketConnection(webSocket, function(){
+            console.log("message sent!!!");
+            webSocket.send(invertedLocations);
+            });    
+        } catch (error) {
+            console.log(error.toString());
+        }
+        // webSocket.send(invertedLocations);
+
         // Called when the connection to the server is closed.
         webSocket.onclose = function() {
+            console.log("call");
             handleServerResponse(lastResponse);
+            console.log("call~~~~");
         };
+        
         webSocket.onmessage = function(evt){ 
-            console.log("Received from server:", evt.data);
+            console.log("sent to clinet:", evt.data);
             lastResponse = evt.data;
-        };                
+        }; 
+        
     }
+    
+    // Make the function wait until the connection is made...
+    function waitForSocketConnection(socket, callback){
+        setTimeout(
+                function () {
+                    if (socket.readyState === 1) {
+                        console.log("Connection is made")
+                        if(callback != null){
+                            callback();
+                        }
+                        return;
 
+                    } else {
+                        console.log("wait for connection...")
+                        waitForSocketConnection(socket, callback);
+                    }
+                }, 5); // wait 5 milisecond for the connection...
+            }
+
+    
+    
+    
     var processed = false;
     function handleServerResponse(response) {
         // DO SOMETHING WITH THE RESPONSE

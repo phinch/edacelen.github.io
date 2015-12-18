@@ -13,15 +13,12 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 import com.mongodb.DBCollection;
-import Audio.AudioManager;
-import Audio.AudioSnap;
 
 /**
  * Created by Jiahui on 06/10/15.
  */
 public class test {
-    
-    public static AudioManager audioManager = new AudioManager();    
+       
     public static LocationManager2 locationManager = new LocationManager2();
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     //II. Get Sample coordinateS, Select Interesting Locations, and Get Weather Information of Interesting Locations

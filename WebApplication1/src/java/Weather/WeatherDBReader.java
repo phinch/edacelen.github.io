@@ -1,5 +1,6 @@
 package Weather;
 
+import java.util.TimeZone;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -18,76 +19,102 @@ public class WeatherDBReader {
     
 	public ArrayList<WeatherInfo> getWeatherInfo(ArrayList<Location2> interestingIntervals, DBCollection weatherTable){
     	ArrayList<WeatherInfo> weatherInfoList = new ArrayList<WeatherInfo>();
-	// get weatherInfo every 15 minutes
+		// get weatherInfo every 15 minutes
     	String begin = interestingIntervals.get(0).dateTime;
-        
-        for(int i = 0; i<interestingIntervals.size(); i++){
-            double period = getPeriod(begin, interestingIntervals.get(i).dateTime);
-            if(i == 0 || period >= 900){
-                begin = interestingIntervals.get(i).dateTime;
+		for(int i = 0; i<interestingIntervals.size(); i++){
+    		double period = getPeriod(begin, interestingIntervals.get(i).dateTime);
+    		if(i == 0 || period >= 900){
+    			begin = interestingIntervals.get(i).dateTime;
 
-                String sLng = interestingIntervals.get(i).longitude;	Double dLng = new Double(sLng);
-                String sLat = interestingIntervals.get(i).latitude;	Double dLat = new Double(sLat);
-                String time = interestingIntervals.get(i).dateTime;
-                String dateTime = timeConvertion(time);
-
-                double distance = 30/111.12;
-                String sDistance = ""+distance;
-
-                DBCursor cursor = weatherTable.find(new BasicDBObject("dateTime", dateTime).append("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));
-
-                // result: try not to include "+9999" in "stringTemperature" and "9999" in "stringSpeed" and "null" in "precipitation"
-                BasicDBObject result = new BasicDBObject();
-                BasicDBObject tempBasicDBObject = new BasicDBObject();
-                while(cursor.hasNext()){
-                    tempBasicDBObject = (BasicDBObject) cursor.next();
-                    if(!tempBasicDBObject.get("stringTemperature").equals("+9999") && !tempBasicDBObject.get("stringSpeed").equals("9999")){
-                        result = tempBasicDBObject;
-                    }
-                    if(!tempBasicDBObject.get("precipitation").equals("null")){
-                        result = tempBasicDBObject;
-                        break;
-                    }
-                }
-                // if no match is found, reuslt is empty
-                if(result.isEmpty()){
-                    result = tempBasicDBObject;
-                }
-                // System.out.println(result);
-                // if result is empty, w has default value "", "", "" for windSpeed, temperature, and precipitation
-                WeatherInfo w = new WeatherInfo();
-                if(!result.isEmpty()){
-                    System.out.println("result is not empty");
-                    String temp = result.get("stringTemperature").toString();
-                    
-                    // get temperature
-                    if(!temp.equals("9999")){
-                        w.temperature = getTemperatureFromRecord(result.get("stringTemperature").toString());
-                    }else{
-                            w.temperature = "";
-                    }
-                    // get wind
-                    String wind = result.get("stringSpeed").toString();
-                    if(!wind.equals("9999")){
-                        w.windSpeed = getWindSpeedFromRecord(result.get("stringSpeed").toString());
-                    }else{
-                            w.windSpeed = "";
-                    }
-                    // get precipitation
-                    String prec = result.get("precipitation").toString();
-                    
-                    if(!prec.equals("null")){
-                            w.precipitation = getPrecipitationFromRecord(result.get("precipitation").toString());
-                    }else{
-                            w.precipitation = "";
-                    }
-                }
-                weatherInfoList.add(w);
-            } else {
-                // if this moment is in the range of 15 minutes from last checked moment, let it be the same as last checked weather info
-                weatherInfoList.add(new WeatherInfo(weatherInfoList.get(weatherInfoList.size()-1)));
-            }
-        }
+				String sLng = interestingIntervals.get(i).longitude;	Double dLng = new Double(sLng);
+				String sLat = interestingIntervals.get(i).latitude;	Double dLat = new Double(sLat);
+				String time = interestingIntervals.get(i).dateTime;
+				String dateTime = timeConvertion(time);
+				
+				double distance = 30/111.12;
+				String sDistance = ""+distance;
+				
+				// now the database only includes weather info from 01/01/2015 to 06/13/2015
+                // all data out of this range has empty weather info
+				System.out.println(time);
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		        String inputString = time;
+		        Date date = new Date();
+		        try {
+		        	date = sdf.parse(time + ".000");
+		        	System.out.println("in milliseconds: " + date.getTime());     
+		        } catch(Exception e) {
+		        	
+		        }
+		        long startTime  = Long.parseLong("1420088400000");
+		        long endTime  = Long.parseLong("1434254399000");
+		        // if in the range, serach in the database, otherwise ignore
+		        if (date.getTime() >= startTime && date.getTime() <= endTime) {
+		        	DBCursor cursor = weatherTable.find(new BasicDBObject("dateTime", dateTime).append("loc",JSON.parse("{$near : [ " + dLng + "," + dLat + "] , $maxDistance : " + sDistance + "}")));
+					
+					// result: try not to include "+9999" in "stringTemperature" and "9999" in "stringSpeed" and "null" in "precipitation"
+					BasicDBObject result = new BasicDBObject();
+					BasicDBObject tempBasicDBObject = new BasicDBObject();
+					while(cursor.hasNext()){
+						tempBasicDBObject = (BasicDBObject) cursor.next();
+						if(!tempBasicDBObject.get("stringTemperature").equals("+9999") && !tempBasicDBObject.get("stringSpeed").equals("9999")){
+							result = tempBasicDBObject;
+						}
+						if(!tempBasicDBObject.get("precipitation").equals("null")){
+							result = tempBasicDBObject;
+							break;
+						}
+					}
+					// if no match is found, result is empty
+					if(result.isEmpty()){
+						result = tempBasicDBObject;
+					}
+					// System.out.println(result);
+					// if result is empty, w has default value "", "", "" for windSpeed, temperature, and precipitation
+					WeatherInfo w = new WeatherInfo();
+					if(!result.isEmpty()){
+						String temp = result.get("stringTemperature").toString();
+						// System.out.println("temp is: " + temp);
+						// get temperature
+						if(!temp.equals("9999")){
+							w.temperature = getTemperatureFromRecord(result.get("stringTemperature").toString());
+						}else{
+							w.temperature = "";
+						}
+						// get wind
+						String wind = result.get("stringSpeed").toString();
+						// System.out.println("wind is: " + wind);
+						if(!wind.equals("9999")){
+							w.windSpeed = getWindSpeedFromRecord(result.get("stringSpeed").toString());
+						}else{
+							w.windSpeed = "";
+						}
+						// get precipitation
+						String prec = result.get("precipitation").toString();
+						// System.out.println("prec is: " + prec);
+						if(!prec.equals("null")){
+							w.precipitation = getPrecipitationFromRecord(result.get("precipitation").toString());
+						}else{
+							w.precipitation = "";
+						}
+					}
+				    weatherInfoList.add(w);
+	    		
+		        } else {
+		        	WeatherInfo w = new WeatherInfo();
+		        	w.temperature = "";
+		        	w.windSpeed = "";
+		        	w.windSpeed = "";
+		        	weatherInfoList.add(w);
+		        }
+		        
+				
+    		} else {
+    			// if this moment is in the range of 15 minutes from last checked moment, let it be the same as last checked weather info
+    			weatherInfoList.add(new WeatherInfo(weatherInfoList.get(weatherInfoList.size()-1)));
+    		}
+		}
         return weatherInfoList;
     }
 	

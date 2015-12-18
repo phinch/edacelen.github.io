@@ -51,9 +51,8 @@ public class newEndpoint {
      */
     @OnMessage
     public void onMessage(String message, Session session) throws ParseException{
-        //System.out.println("Message from " + session.getId() + ": " + message);
+        System.out.println("Message from " + session.getId() + ": " + message);
         System.out.println("Message from " + session.getId());
-
         try {
             String[] input = message.split(";");    
             ArrayList<ArrayList<Location2>> trips = test.getTrips(input);
@@ -90,7 +89,6 @@ public class newEndpoint {
     public void onClose(Session session){
         System.out.println("Session " +session.getId()+" has ended");
     }
-    
     
 
     
