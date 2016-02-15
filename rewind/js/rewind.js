@@ -25,6 +25,8 @@ $(function() {
     var ambiance = null;
     var panoWidth  = 640;
     var panoHeight = 640;
+    
+    var API_KEY = 'AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E';
 
     function createHyperlapse(locations, pano) {
         $(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
@@ -42,12 +44,12 @@ $(function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
                     duration: 15000,
-                    totalFrames: 150,
+                    totalFrames: 300,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
                     domain: 'http://maps.googleapis.com',
-                    key: 'AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E',
+                    key: API_KEY,
                 });
 
                 routeSequence.done(function(player) {
@@ -72,7 +74,6 @@ $(function() {
                 });
             });
         }
-
     }
 
     function mergeGoogleResponses(googleResponses) {
@@ -101,20 +102,18 @@ $(function() {
         var first = locations.shift()
         var last = locations.pop()
 
-        var route = {
-            request: {
-                origin: googleLatLng(first),
-                destination: googleLatLng(last),
-                waypoints: _(locations).map(function(location) {
-                    return {
-                        location: googleLatLng(location)
-                    };
-                }),
-                travelMode: google.maps.DirectionsTravelMode.DRIVING
-            }
+        var routeRequest = {
+            origin: googleLatLng(first),
+            destination: googleLatLng(last),
+            waypoints: _(locations).map(function(location) {
+                return {
+                    location: googleLatLng(location)
+                };
+            }),
+            travelMode: google.maps.DirectionsTravelMode.DRIVING
         };
 
-        getRouteFromDirectionsService(route.request, 3, function(err, response) {
+        getRouteFromDirectionsService(routeRequest, 3, function(err, response) {
             if (err) {
                 throw Error("Direction Service request failed for: " + JSON.stringify(err));
             }
@@ -293,7 +292,7 @@ $(function() {
 
     var locationsByDate = null;
 
-    var timeZoneUrlTpl = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+    var timeZoneUrlTpl = "https://maps.googleapis.com/maps/api/timezone/json?key=" + API_KEY + "location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
     var timezoneJSONs = {};
     function getTimezoneJSON(url, callback) {
@@ -319,7 +318,7 @@ $(function() {
 
         // console.log("Manipulating:", image);
 
-        var month = getMonth(datetime.format("MM/DD/YYYY"));
+        var month = getMonth(datetime.format("YYYY-MM-DD"));
         // var saturation = MONTH_SATURATION[month];
         
         getTimezoneJSON(timeZoneUrl, function(data) {
@@ -660,10 +659,9 @@ $(function() {
                 uniq[key] = true;
             }
 
-            //locationHtml += "Date:" + moment(date).format("MM/DD/YYYY H:mm:ss") + " Lat:" + lat + " Lon:" + lon + "\n";
+            //locationHtml += "Date:" + moment(date).format("YYYY-MM-DD H:mm:ss") + " Lat:" + lat + " Lon:" + lon + "\n";
             uniqLocations.push(location);
         });
-
 
         //$("#urlList").html("<pre>"+locationHtml+"</pre>")
         return uniqLocations;
@@ -691,7 +689,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10"; // shouldn't this use the key?
             urls.push(streetViewUrl);
 
             // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
@@ -705,11 +703,7 @@ $(function() {
         var results = {};
 
         obj.locations.forEach(function(location, i) {
-            if (i % 1000 == 0) {
-                // console.log("Parsing: " + i + "/" + obj.locations.length);
-            }
-
-            if (location.accuracy > 10) return;
+            if (location.accuracy > 200) return; // maybe this should be 200
 
             var lat = location.latitudeE7 * 0.0000001;
             var lon = location.longitudeE7 * 0.0000001;
@@ -717,7 +711,7 @@ $(function() {
 
             //time checks
             var timeMs = parseInt(location.timestampMs);
-            var date = moment(timeMs).format("MM/DD/YYYY");
+            var date = moment(timeMs).format("YYYY-MM-DD");
             if (!results[date]) {
                 results[date] = [];
             }
@@ -726,8 +720,6 @@ $(function() {
                 longitude: lon,
                 millis: timeMs
             });
-
-            //if (Math.random() > 0.99) 
         });
 
         return results;
