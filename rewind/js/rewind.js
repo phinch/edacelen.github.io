@@ -43,8 +43,8 @@ $(function() {
             getGoogleRoute(routes, gResults, i, function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
-                    duration: 15000,
-                    totalFrames: 300,
+                    duration: 30000,
+                    totalFrames: 600,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
@@ -689,7 +689,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=" API_KEY + "size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=" + API_KEY + "&size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
             // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
