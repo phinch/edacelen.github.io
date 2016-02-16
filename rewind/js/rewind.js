@@ -689,7 +689,7 @@ $(function() {
                 }
             }
 
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10"; // shouldn't this use the key?
+            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=" API_KEY + "size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
             urls.push(streetViewUrl);
 
             // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
@@ -703,7 +703,7 @@ $(function() {
         var results = {};
 
         obj.locations.forEach(function(location, i) {
-            if (location.accuracy > 200) return; // maybe this should be 200
+            if (location.accuracy > 200) return;
 
             var lat = location.latitudeE7 * 0.0000001;
             var lon = location.longitudeE7 * 0.0000001;
