@@ -1,7 +1,9 @@
 $(function() {
     var Caman = require('caman');
 
-	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+    var API_KEY = 'AIzaSyC_GSlJw9b4ns8AHndV-EMp-kCA35ZAvSE';
+   
+	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?key=" + API_KEY + "&location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
 	// For northern hemisphere only!
 	MONTH_SATURATION = {
@@ -25,8 +27,7 @@ $(function() {
     var ambiance = null;
     var panoWidth  = 640;
     var panoHeight = 640;
-    
-    var API_KEY = 'AIzaSyB6Cjbmooja_wX5fnuajKHNfRCTgwpss1E';
+    var directions_service;
 
     function createHyperlapse(locations, pano) {
         $(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
@@ -43,8 +44,8 @@ $(function() {
             getGoogleRoute(routes, gResults, i, function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
-                    duration: 30000,
-                    totalFrames: 600,
+                    duration: 10000,
+                    totalFrames: 200,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
@@ -99,8 +100,10 @@ $(function() {
     function getGoogleRoute(routes, results, i, onFinished) {
         var locations = routes[i];
 
-        var first = locations.shift()
-        var last = locations.pop()
+        var first = locations.shift();
+        var last = locations.pop();
+        
+        directions_service = new google.maps.DirectionsService();
 
         var routeRequest = {
             origin: googleLatLng(first),
@@ -113,7 +116,7 @@ $(function() {
             travelMode: google.maps.DirectionsTravelMode.DRIVING
         };
 
-        getRouteFromDirectionsService(routeRequest, 3, function(err, response) {
+        getRouteFromDirectionsService(routeRequest, 10, function(err, response) {
             if (err) {
                 throw Error("Direction Service request failed for: " + JSON.stringify(err));
             }
@@ -126,23 +129,20 @@ $(function() {
         });
     }
 
-    function getRouteFromDirectionsService(request, retry, callback) {
-        var directions_service = new google.maps.DirectionsService();
-
-        directions_service.route(request, function(response, status) {
-            if (status == google.maps.DirectionsStatus.OK) {
-                callback(null, response);
-            } else {
-                if (retry > 0) {
-                    setTimeout(function() { 
-                        getRouteFromDirectionsService(request, retry - 1, callback); 
-                    }, 200);
-                } else {
-                    console.log(status);
-                    callback(status, null);
-                }
-            }
-        });
+    function getRouteFromDirectionsService(request, tries, callback) {
+        setTimeout(function() { 
+	        directions_service.route(request, function(response, status) {
+	            if (status == google.maps.DirectionsStatus.OK) {
+	                callback(null, response);
+	            } else if (tries > 0) {
+	            	console.log('retrying with ' + tries + ' left');
+					getRouteFromDirectionsService(request, tries - 1, callback); 
+	            } else {
+	                console.log(status);
+	                callback(status, null);
+	            }
+	        });            
+        }, Math.random() * 10000);
     }
 
     function sliceLocationsToRoutes(locations) {
