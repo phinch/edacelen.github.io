@@ -96,6 +96,7 @@ div.hyperlapse canvas {
 #button-box button {
 	padding: 8px 16px;
 	margin-right: 40px;
+	margin-bottom: 10px;
 	border: none;
 	border-width: 1px;
 	border-color: #ccc;
@@ -105,13 +106,12 @@ div.hyperlapse canvas {
 	color: white;
 }
 
-#button-box button:last-of-type {
-	margin-right: 0px;
+#rewind-controls {
+	margin-left: 20px;
 }
 
-#button-box button:nth-child(2) {
-	background-color: white;
-	color: #009aff;
+#button-box button:last-of-type {
+	margin-right: 0px;
 }
 
 #upload-area {

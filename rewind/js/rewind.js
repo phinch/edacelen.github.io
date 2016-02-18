@@ -30,7 +30,7 @@ $(function() {
     var directions_service;
 
     function createHyperlapse(locations, pano) {
-        $(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
+        //$(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
 
         if (locations.length < 2) {
             alert("too few location points (count: " + locations.length + ") for the day");
@@ -54,14 +54,20 @@ $(function() {
                 });
 
                 routeSequence.done(function(player) {
-                    $(pano).find("img").hide();
-                    $(pano).find("canvas").show();
-                    $(pano).show();
-                    $(pano.parentNode).find('.location').hide();
-                    $(pano.parentNode).find('.loading-gif').hide();
-                    player.play();
-                    ambiance = new Audio("./audio/thunder.mp3");
-                    ambiance.play();
+                    $("#playButton").html("Play Rewind");
+                    $("#playButton").css("background-color", "#009aff");
+                    $("#playButton").css("color", "white");
+                    
+                    $("#playButton").click(function() {
+                        $(pano).find("img").hide();
+                        $(pano).find("canvas").show();
+                        $(pano).show();
+                        $(pano.parentNode).find('.location').hide();
+                        player.play();
+                    });
+                   
+                    // ambiance = new Audio("./audio/thunder.mp3");
+                    // ambiance.play();
 
                     //when cursor is on rewind video
                     $(pano).on("mousemove", function(event) {
@@ -453,39 +459,9 @@ $(function() {
             "<div class='image-pano' style='position:relative'>" +
                 "<img class='location' crossorigin='anonymous' src='{{SRC}}' data-date='{{DATE}}' data-millis='{{MILLIS}}' data-lat='{{LAT}}' data-lon='{{LON}}' style='width:"+ panoWidth +"px; height:"+ panoHeight +"px;'></img>" +
                 "<img class='play-icon' src='img/play.png' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'>"+
-                "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'></img>"+
+                // "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
-            "<ol>" +
-            "<li class='question'>" +
-            "<div class='qtext'> Do you remember this place?</div>" +
-            "<div class='qanswers'>" +
-            "<input type='radio' name='q{{INDEX}}ans1' value='true'></input><span class='ans-label'> Yes</span>" +
-            "<input type='radio' name='q{{INDEX}}ans1' value='false'></input><span class='ans-label'> No</span>" +
-            "</div>" +
-            "</li>" +
-            // "<li class='question'>" +
-            // 	"<div class='qtext'> Is this an important place to you?</div>" +
-            // 	"<div class='qanswers'>" +
-            // 		"<input type='radio' name='q{{INDEX}}ans2' value='true'></input><span class='ans-label'> Yes</span>" +
-            // 		"<input type='radio' name='q{{INDEX}}ans2' value='false'></input><span class='ans-label'> No</span>" +
-            // 	"</div>" +
-            // "</li>" +
-            "<li class='question'>" +
-            "<div class='qtext'> Do you want to keep this picture?</div>" +
-            "<div class='qanswers'>" +
-            "<input type='radio' name='q{{INDEX}}ans3' value='true'></input><span class='ans-label'> Yes</span>" +
-            "<input type='radio' name='q{{INDEX}}ans3' value='false'></input><span class='ans-label'> No</span>" +
-            "</div>" +
-            "</li>" +
-            "<li class='question' style='display:none'>" +
-            "<div class='qtext'> Were you traveling alone?</div>" +
-            "<div class='qanswers'>" +
-            "<input type='radio' name='q{{INDEX}}ans4' value='true'></input><span class='ans-label'> Yes</span>" +
-            "<input type='radio' name='q{{INDEX}}ans4' value='false'></input><span class='ans-label'> No</span>" +
-            "</div>" +
-            "</li>" +
-            "</ol>" +
             "<div style='clear: both;''></div>" +
             "</div>";
 
@@ -517,8 +493,13 @@ $(function() {
         });
 
         $(".image-pano").click(function() {
+            $("#playButton").html("Loading Rewind...");
+            $("#playButton").css("background-color", "white");
+            $("#playButton").css("color", "#009aff");
+            $("#playButton").visible();
+
             $(this).addClass("loading-hyperlapse");
-            var $img = $(this).find(".location")
+            var $img = $(this).find(".location");
             var locations = getLocationsOnDate($img.attr("data-date"));
 
             var millis = $img.attr("data-millis");
@@ -563,34 +544,6 @@ $(function() {
         $("#q0").show();
         $("#nextButton").visible();
 
-        $("#submitButton").click(function() {
-            var questions = $(".location-questions");
-            var answers = [];
-            if (ambiance) ambiance.pause();
-
-            questions.each(function(i, locQuestion) {
-                var url = $(locQuestion).find("img").attr("src");
-                var questions = $(locQuestion).find(".question");
-
-                var answer = {
-                    "url": url,
-                    "q1": $(questions[0]).find("input:checked").attr("value") || null,
-                    "q2": $(questions[1]).find("input:checked").attr("value") || null,
-                    "q3": $(questions[2]).find("input:checked").attr("value") || null,
-                };
-
-                answers.push(answer);
-            });
-
-            console.log(answers);
-
-            yesCounter = 0;
-            answers.forEach(function(answer) {
-                if (answer["q1"] == "true")
-                    yesCounter++;
-            });
-            alert("You remember " + yesCounter + " our of " + answers.length + " places");
-        });
         $("#nextButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
@@ -608,7 +561,12 @@ $(function() {
             }
             $("#q" + imageIndex).show();
             console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
+
+            //if ($("#playButton")) $("#playButton").remove();
+            $("#playButton").off();
+            $("#playButton").invisible();
         });
+
         $("#backButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
@@ -627,6 +585,9 @@ $(function() {
             $("#q" + imageIndex).show();
             console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
+            //if ($("#playButton")) $("#playButton").remove();
+            $("#playButton").off();
+            $("#playButton").invisible();
         });
     }
 
