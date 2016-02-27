@@ -413,24 +413,46 @@ $(function() {
         });
     }
 
-    function getRandomLocations(locationsByDate, count) {
+    function getRandomLocations(locationsByDate, count, callback) {
         var randLocations = [];
         var i = 0;
         var dates = _.keys(locationsByDate);
-        while (i < count) {
+        var tries = count * 2;
+        var tried = 0;
+        var completed = false;
+        
+        while (i < tries) {
             var date = dates[Math.floor(Math.random() * dates.length)];
             var dateLocations = getLocationsOnDate(date);
 
             if (dateLocations.length > 2) {
-                var location = dateLocations[Math.floor(Math.random() * dateLocations.length)];
-                randLocations.push({
-                    date: date,
-                    location: location
-                });
                 i++;
+
+                (function(location) {
+                    var streetviewUrl = generateStreetViewUrl(location);
+                    $.get(streetviewUrl, function(imageData) {
+                        tried++;
+
+                        if (imageData.length < 10000) {
+                            console.log("Gray image!", streetviewUrl);
+                            return; // gray image
+                        }
+                        if (completed) return; // we've already called the callback
+
+                        randLocations.push({
+                            date: date,
+                            location: location
+                        });
+
+                        if (randLocations.length == count || tried == tries) {
+                            // we've collected enough or tried enough
+                            completed = true;
+                            callback(randLocations);
+                        }
+                    });
+                })(dateLocations[Math.floor(Math.random() * dateLocations.length)]);
             }
         }
-        return randLocations;
     }
 
     function getMonth(dateString) {
@@ -439,12 +461,16 @@ $(function() {
 
     function processLocationExport(fileContents) {
         locationsByDate = parseLocationJson(fileContents);
+        var imageCount = 10;
 
+        var locations = getRandomLocations(locationsByDate, imageCount, processLocations);
+    }
+
+    function processLocations(locations) {
         $("#upload-wrapper").hide();
 
         var imageIndex = 0;
-        var imageCount = 10;
-        var locations = getRandomLocations(locationsByDate, imageCount);
+
         //var urls = generateStreetViewUrls(locations, false);
         var flatLocations = _.pluck(locations, "location");
 
@@ -633,30 +659,20 @@ $(function() {
         var uniq = {}
 
         locations.forEach(function(location, i) {
-            // always get up to the first 7 digits after decimal
-            var lat = ("" + location.latitude).match(/^(.+\.\d{1,7})/)[1];
-            var lon = ("" + location.longitude).match(/^(.+\.\d{1,7})/)[1];
-
-            if (uniq) {
-                // location unique to 3 digits after decimal point
-                var latSig = ("" + lat).match(/^(.+\.\d{1,3})/)[1];
-                var lonSig = ("" + lon).match(/^(.+\.\d{1,3})/)[1];
-                var key = latSig + "_" + lonSig;
-
-                if (uniq[key]) {
-                    return;
-                } else {
-                    uniq[key] = true;
-                }
-            }
-
-            var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=" + API_KEY + "&size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
-            urls.push(streetViewUrl);
-
-            // if (Math.random() > 0.99) console.log("Gen URLs: " + i / locations.length * 100 + "%");
+            urls.push(generateStreetViewUrl(location));
         });
 
         return urls;
+    }
+
+    function generateStreetViewUrl(location) {
+        // always get up to the first 7 digits after decimal
+        var lat = ("" + location.latitude).match(/^(.+\.\d{1,7})/)[1];
+        var lon = ("" + location.longitude).match(/^(.+\.\d{1,7})/)[1];
+
+        var streetViewUrl = "https://maps.googleapis.com/maps/api/streetview?key=" + API_KEY + "&size="+ panoWidth +"x"+ panoHeight +"&location=" + lat + "," + lon + "&fov=90&heading=270&pitch=10";
+
+        return streetViewUrl;
     }
 
     function parseLocationJson(locJson) {
