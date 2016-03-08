@@ -3,32 +3,37 @@ $(function() {
 
     var API_KEY = 'AIzaSyC_GSlJw9b4ns8AHndV-EMp-kCA35ZAvSE';
    
-	TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?key=" + API_KEY + "&location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
+    TIMEZONE_API = "https://maps.googleapis.com/maps/api/timezone/json?key=" + API_KEY + "&location={{LAT}},{{LON}}&timestamp={{MILLIS}}";
 
-	// For northern hemisphere only!
-	MONTH_SATURATION = {
-		"12": -40,
-		"01": -40,
-		"02": -40,
 
-		"03": 10,
-		"04": 10,
-		"05": 10,
+    var weather_filepath = '../data/clean.txt';
 
-		"06": 40,
-		"07": 40,
-		"08": 40,
+    // For northern hemisphere only!
+    MONTH_SATURATION = {
+        "12": -40,
+        "01": -40,
+        "02": -40,
 
-		"09": -10,
-		"10": -10,
-		"11": -10,
-	};
+        "03": 10,
+        "04": 10,
+        "05": 10,
+
+        "06": 40,
+        "07": 40,
+        "08": 40,
+
+        "09": -10,
+        "10": -10,
+        "11": -10,
+    };
 
     var ambiance = null;
     var panoWidth  = 640;
     var panoHeight = 640;
     var directions_service;
 
+    // TODO: load weather file uh figure out how to do this _properly_
+    
     function createHyperlapse(locations, pano) {
         //$(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
 
@@ -75,7 +80,7 @@ $(function() {
                         var mouseY = parseInt(event.pageY - parseInt($(pano).offset().top));
                         // console.log( "pageX: " + mouseX + ", pageY: " + mouseY );
                         var imagePos = mouseX / panoWidth;
-                        console.log("Frame progress:", imagePos);
+                        //console.log("Frame progress:", imagePos);
                         player.setProgress(imagePos);
                     });
                 });
@@ -137,17 +142,17 @@ $(function() {
 
     function getRouteFromDirectionsService(request, tries, callback) {
         setTimeout(function() { 
-	        directions_service.route(request, function(response, status) {
-	            if (status == google.maps.DirectionsStatus.OK) {
-	                callback(null, response);
-	            } else if (tries > 0) {
-	            	console.log('retrying with ' + tries + ' left');
-					getRouteFromDirectionsService(request, tries - 1, callback); 
-	            } else {
-	                console.log(status);
-	                callback(status, null);
-	            }
-	        });            
+            directions_service.route(request, function(response, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    callback(null, response);
+                } else if (tries > 0) {
+                    console.log('retrying with ' + tries + ' left');
+                    getRouteFromDirectionsService(request, tries - 1, callback); 
+                } else {
+                    console.log(status);
+                    callback(status, null);
+                }
+            });            
         }, Math.random() * 10000);
     }
 
@@ -326,6 +331,29 @@ $(function() {
 
         var month = getMonth(datetime.format("YYYY-MM-DD"));
         // var saturation = MONTH_SATURATION[month];
+
+        // precipitation - RAIN LOOKS REALLY BAD
+        //console.log(datetime.format('YYYYMMDDHH'));
+        // var re = new RegExp(datetime.format('YYYYMMDDHH')+'[^,]{16}');
+        // var myWeather = weatherData.match(re)[0];
+        // var precip = myWeather.substring(25);
+        //console.log(myWeather+":"+precip);
+        // var sprinkle = [11, 12, 13, 14, 15];
+        // var drizzle = [17, 18, 19, 20, 21];
+        // var rain = [23, 24, 25, 26, 27];
+        // var pour = [28, 29, 30, 31, 32];
+        // if (precip == 4) {
+        //     var noise = pour[Math.floor(Math.random()*pour.length)];
+        // }
+        // else if (precip == 3) {
+        //     var noise = rain[Math.floor(Math.random()*rain.length)];
+        // }
+        // else if (precip == 2) {
+        //     var noise = drizzle[Math.floor(Math.random()*drizzle.length)];
+        // }
+        // else if (precip == 1) {
+        //     var noise = sprinkle[Math.floor(Math.random()*sprinkle.length)];
+        // }
         
         getTimezoneJSON(timeZoneUrl, function(data) {
             var hourOffset = data.rawOffset / 60 / 60;
@@ -382,6 +410,7 @@ $(function() {
             // log data on image attributes
             $(image).attr("data-saturation", saturation);
             $(image).attr("data-exposure", exposure);
+            //$(image).attr("data-noise", noise);
             $(image).attr("data-hour", hour);
             $(image).attr("data-localHour", localHour);
             
@@ -398,6 +427,7 @@ $(function() {
                 $(newImage).attr("data-lon", $(image).attr("data-lon"));
                 $(newImage).attr("data-saturation", $(image).attr("data-saturation"));
                 $(newImage).attr("data-exposure", $(image).attr("data-exposure"));
+                //$(newImage).attr("data-noise", $(image).attr("data-noise"));
                 $(newImage).attr("data-hour", $(image).attr("data-hour"));
                 $(newImage).attr("data-localHour", $(image).attr("data-localHour"));
 
@@ -456,7 +486,7 @@ $(function() {
     }
 
     function getMonth(dateString) {
-    	return dateString.split("/")[0];
+        return dateString.split("/")[0];
     }
 
     function processLocationExport(fileContents) {
@@ -586,7 +616,7 @@ $(function() {
                 $("#nextButton").invisible();
             }
             $("#q" + imageIndex).show();
-            console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
+            // console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
             //if ($("#playButton")) $("#playButton").remove();
             $("#playButton").off();
@@ -609,7 +639,7 @@ $(function() {
             }
             $("#q" + (imageIndex + 1)).hide();
             $("#q" + imageIndex).show();
-            console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
+            // console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
             //if ($("#playButton")) $("#playButton").remove();
             $("#playButton").off();
