@@ -562,6 +562,9 @@ $(function() {
             var lat = $img.attr("data-lat");
             var lon = $img.attr("data-lon");
 
+            console.log('Creating Rewind from ' + $img.attr("data-date")
+                + ' at lat,lon: ' + $img.attr("data-lat") + ', ' + $img.attr("data-lon"));
+
             // $img.hide();
             // $img.nextAll(".play-icon").hide();
             // $img.nextAll(".hyperlapse").show();
@@ -616,6 +619,12 @@ $(function() {
                 $("#nextButton").invisible();
             }
             $("#q" + imageIndex).show();
+
+            var $img = $(".image-pano").find(".location");
+            console.log('Date: ' + $img.attr("data-date") + '\n' 
+                + 'Lat: ' + $img.attr("data-lat") 
+                + ', Lon: ' + $img.attr("data-lon"));
+
             // console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
             //if ($("#playButton")) $("#playButton").remove();
