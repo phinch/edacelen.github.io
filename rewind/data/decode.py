@@ -2,6 +2,9 @@ import csv
 import re
 
 '''
+TO USE: python decode.py <weather-file>
+will output to clean.txt
+
 decodes noaa files
 docs at http://www1.ncdc.noaa.gov/pub/data/noaa/ish-format-document.pdf
 weather currently determined by weather at tfgreen because providence 
@@ -59,4 +62,6 @@ with open('725070-14765-2016', 'rb') as fin:
 					else:
 						precip = 1 
 
+				if precip > 0:
+					precip = 1
 				fout.write(str(date)+time+lat+lon+str(precip)+',')

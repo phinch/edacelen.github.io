@@ -549,32 +549,34 @@ $(function() {
         });
 
         $(".image-pano").click(function() {
-            $("#playButton").html("Loading Rewind...");
-            $("#playButton").css("background-color", "white");
-            $("#playButton").css("color", "#009aff");
-            $("#playButton").visible();
+            if ($(this).attr('class') != 'image-pano loading-hyperlapse') {
+                $("#playButton").html("Loading Rewind...");
+                $("#playButton").css("background-color", "white");
+                $("#playButton").css("color", "#009aff");
+                $("#playButton").visible();
 
-            $(this).addClass("loading-hyperlapse");
-            var $img = $(this).find(".location");
-            var locations = getLocationsOnDate($img.attr("data-date"));
+                $(this).addClass("loading-hyperlapse");
+                var $img = $(this).find(".location");
+                var locations = getLocationsOnDate($img.attr("data-date"));
 
-            var millis = $img.attr("data-millis");
-            var lat = $img.attr("data-lat");
-            var lon = $img.attr("data-lon");
+                var millis = $img.attr("data-millis");
+                var lat = $img.attr("data-lat");
+                var lon = $img.attr("data-lon");
 
-            console.log('Creating Rewind from ' + $img.attr("data-date")
-                + ' at lat,lon: ' + $img.attr("data-lat") + ', ' + $img.attr("data-lon"));
+                console.log('Creating Rewind from ' + $img.attr("data-date")
+                    + ' at lat,lon: ' + $img.attr("data-lat") + ', ' + $img.attr("data-lon"));
 
-            // $img.hide();
-            // $img.nextAll(".play-icon").hide();
-            // $img.nextAll(".hyperlapse").show();
+                // $img.hide();
+                // $img.nextAll(".play-icon").hide();
+                // $img.nextAll(".hyperlapse").show();
 
-            window.modifyHyperlapseImages = function(image, callback) {
-                manipulateImage(image, millis, lat, lon, callback);
-                // callback(image);
-            };
+                window.modifyHyperlapseImages = function(image, callback) {
+                    manipulateImage(image, millis, lat, lon, callback);
+                    // callback(image);
+                };
 
-            createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
+                createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
+            }
         });
 
         $(".location-questions > ol > li:first-child input").change(function() {
@@ -621,9 +623,6 @@ $(function() {
             $("#q" + imageIndex).show();
 
             var $img = $(".image-pano").find(".location");
-            console.log('Date: ' + $img.attr("data-date") + '\n' 
-                + 'Lat: ' + $img.attr("data-lat") 
-                + ', Lon: ' + $img.attr("data-lon"));
 
             // console.log("Showing: #q" + imageIndex + " imageIndex: " + imageIndex + " imageCount: " + urls.length);
 
