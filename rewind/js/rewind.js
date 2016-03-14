@@ -60,8 +60,8 @@ $(function() {
                     $(pano.parentNode).find('.location').hide();
                     $(pano.parentNode).find('.loading-gif').hide();
                     player.play();
-                    ambiance = new Audio("./audio/thunder.mp3");
-                    ambiance.play();
+                    // ambiance = new Audio("./audio/thunder.mp3");
+                    // ambiance.play();
 
                     //when cursor is on rewind video
                     $(pano).on("mousemove", function(event) {
@@ -597,7 +597,7 @@ $(function() {
         $("#submitButton").click(function() {
             var questions = $(".location-questions");
             var answers = [];
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
 
             questions.each(function(i, locQuestion) {
                 var url = $(locQuestion).find("img").attr("src");
@@ -625,7 +625,7 @@ $(function() {
         $("#nextButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
 
 
             $("#submitButton").visible();
@@ -643,11 +643,11 @@ $(function() {
         $("#backButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
 
             $("#nextButton").visible();
             $("#submitButton").visible();
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
             if (imageIndex > 0) {
                 imageIndex--;
             }
