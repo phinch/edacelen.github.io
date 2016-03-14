@@ -422,7 +422,9 @@ $(function() {
             if (dateLocations.length > 2) {
                 i++;
 
-                (function(location) {
+                (function() {
+                    var locDate = date;
+                    var location = dateLocations[Math.floor(Math.random() * dateLocations.length)];
                     var streetviewUrl = generateStreetViewUrl(location);
                     $.get(streetviewUrl, function(imageData) {
                         tried++;
@@ -434,7 +436,7 @@ $(function() {
                         if (completed) return; // we've already called the callback
 
                         randLocations.push({
-                            date: date,
+                            date: locDate,
                             location: location
                         });
 
@@ -444,7 +446,7 @@ $(function() {
                             callback(randLocations);
                         }
                     });
-                })(dateLocations[Math.floor(Math.random() * dateLocations.length)]);
+                })();
             }
         }
     }
