@@ -457,7 +457,7 @@ $(function() {
 
     function processLocationExport(fileContents) {
         locationsByDate = parseLocationJson(fileContents);
-        var imageCount = 10;
+        var imageCount = 30;
 
         var locations = getRandomLocations(locationsByDate, imageCount, processLocations);
     }
