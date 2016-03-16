@@ -77,6 +77,11 @@ body {
 	margin-bottom: 10px;
 }
 
+.location-questions .location-meta {
+	font-size: 18px;
+	margin-left: 20px;
+}
+
 div.hyperlapse {
 	background-color: #fbfbfb;
 }
