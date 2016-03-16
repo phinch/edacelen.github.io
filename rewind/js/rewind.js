@@ -583,8 +583,12 @@ $(function() {
                     // callback(image);
                 };
 
+                console.log('Creating rewind from '+$img.attr("data-date")+'at ('
+                +$img.attr("data-lat")+', '+$img.attr("data-lon")+')');
+
                 createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
             }
+
         });
 
         $(".location-questions > ol > li:first-child input").change(function() {
