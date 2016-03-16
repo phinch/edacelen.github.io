@@ -60,6 +60,7 @@ $(function() {
                 });
 
                 routeSequence.done(function(player) {
+<<<<<<< HEAD
                     $("#playButton").html("Play Rewind");
                     $("#playButton").css("background-color", "#009aff");
                     $("#playButton").css("color", "white");
@@ -72,6 +73,14 @@ $(function() {
                         player.play();
                     });
                    
+=======
+                    $(pano).find("img").hide();
+                    $(pano).find("canvas").show();
+                    $(pano).show();
+                    $(pano.parentNode).find('.location').hide();
+                    $(pano.parentNode).find('.loading-gif').hide();
+                    player.play();
+>>>>>>> origin/master
                     // ambiance = new Audio("./audio/thunder.mp3");
                     // ambiance.play();
 
@@ -466,7 +475,9 @@ $(function() {
             if (dateLocations.length > 2) {
                 i++;
 
-                (function(location) {
+                (function() {
+                    var locDate = date;
+                    var location = dateLocations[Math.floor(Math.random() * dateLocations.length)];
                     var streetviewUrl = generateStreetViewUrl(location);
                     $.get(streetviewUrl, function(imageData) {
                         tried++;
@@ -478,7 +489,7 @@ $(function() {
                         if (completed) return; // we've already called the callback
 
                         randLocations.push({
-                            date: date,
+                            date: locDate,
                             location: location
                         });
 
@@ -488,20 +499,176 @@ $(function() {
                             callback(randLocations);
                         }
                     });
-                })(dateLocations[Math.floor(Math.random() * dateLocations.length)]);
+                })();
             }
         }
+    }
+
+    function getMostFrequentLocations(ascLocsWithFreqs, count, callback) {
+        var mostFreqLocations = [];
+        var tries = count * 2;
+        var tried = 0;
+        var completed = false;
+
+        var locsToTry = _.last(ascLocsWithFreqs, tries).map(function(locWithFreq) { return locWithFreq.locDate; });
+        
+        locsToTry.forEach(function(location) {
+            var streetviewUrl = generateStreetViewUrl(location);
+            $.get(streetviewUrl, function(imageData) {
+                tried++;
+
+                if (imageData.length < 10000) {
+                    console.log("Gray image!", streetviewUrl);
+                    return; // gray image
+                }
+                if (completed) return; // we've already called the callback
+
+                mostFreqLocations.push({
+                    date: location.date,
+                    location: location
+                });
+
+                if (mostFreqLocations.length == count || tried == tries) {
+                    // we've collected enough or tried enough
+                    completed = true;
+                    callback(mostFreqLocations);
+                }
+            });
+        });
+    }
+
+    function getLeastFrequentLocations(ascLocsWithFreqs, count, callback) {
+        var leastFreqLocations = [];
+        var tries = count * 2;
+        var tried = 0;
+        var completed = false;
+
+        var locsToTry = _.first(ascLocsWithFreqs, tries).map(function(locWithFreq) { return locWithFreq.locDate; });
+        
+        locsToTry.forEach(function(location) {
+            var streetviewUrl = generateStreetViewUrl(location);
+            $.get(streetviewUrl, function(imageData) {
+                tried++;
+
+                if (imageData.length < 10000) {
+                    console.log("Gray image!", streetviewUrl);
+                    return; // gray image
+                }
+                if (completed) return; // we've already called the callback
+
+                leastFreqLocations.push({
+                    date: location.date,
+                    location: location
+                });
+
+                if (leastFreqLocations.length == count || tried == tries) {
+                    // we've collected enough or tried enough
+                    completed = true;
+                    callback(leastFreqLocations);
+                }
+            });
+        });
     }
 
     function getMonth(dateString) {
         return dateString.split("/")[0];
     }
 
+    function sortLocationsByFreq(locations) {
+        var freqs = {};
+
+        locations.forEach(function(location) {
+            // take first 3 digits of lat/lon
+            var lat = ("" + location.latitude).match(/^(.+\.\d{1,3})/)[1];
+            var lon = ("" + location.longitude).match(/^(.+\.\d{1,3})/)[1];
+
+            var key = "" + lat + "," + lon;
+
+            if (!freqs[key]) {
+                freqs[key] = [];
+            }
+
+            freqs[key].push(location);
+        });
+
+        var locsWithFreqs = [];
+
+        _.each(freqs, function(locs, key) { 
+            locsWithFreqs.push({
+                freq: locs.length, // how many times this loc visited
+                locDate: locs[0]   // first time is taken for sample
+            });
+        });
+
+        // ascending sorted version
+        return locsWithFreqs.sort(function(a, b) { return a.freq - b.freq; });
+    }
+
+    // Haversine formula for coordinate distance calculation
+    // From: http://stackoverflow.com/a/27943
+    function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+        function deg2rad(deg) {
+            return deg * (Math.PI/180)
+        }
+
+        var R = 6371; // Radius of the earth in km
+        var dLat = deg2rad(lat2-lat1);  // deg2rad below
+        var dLon = deg2rad(lon2-lon1); 
+        var a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        var distKm = R * c; // Distance in km
+
+        return distKm;
+    }
+
+    function distance(locA, locB) {
+        return getDistanceFromLatLonInKm(
+            locA.latitude, locA.longitude, 
+            locB.latitude, locB.longitude
+        );
+    }
+
+    function markLocationsSurveyMeta(locations, home, type) {
+        locations.forEach(function (location) {
+            location.pickType = type;
+            location.homeDist = distance(home, location.location);
+        });
+    }
+
     function processLocationExport(fileContents) {
         locationsByDate = parseLocationJson(fileContents);
-        var imageCount = 10;
 
-        var locations = getRandomLocations(locationsByDate, imageCount, processLocations);
+        var ascLocsWithFreqs = sortLocationsByFreq(
+            _.flatten(
+                _.map(locationsByDate, function(locs, date) {
+                    return locs.length > 5 ? locs : [];
+                })
+            )
+        );
+
+        var imageCount = 30;
+        var mostFreqImageCount = 5;
+        var leastFreqImageCount = 13;
+        var randomImageCount = imageCount - mostFreqImageCount - leastFreqImageCount;
+
+        getMostFrequentLocations(ascLocsWithFreqs, mostFreqImageCount, function(mostFreqLocations) {
+            getLeastFrequentLocations(ascLocsWithFreqs, leastFreqImageCount, function(leastFreqLocations) {
+                getRandomLocations(locationsByDate, randomImageCount, function(randomLocations) {
+                    var homeLocation = _.last(ascLocsWithFreqs).locDate;
+
+                    markLocationsSurveyMeta(mostFreqLocations, homeLocation, 'M');
+                    markLocationsSurveyMeta(leastFreqLocations, homeLocation, 'L');
+                    markLocationsSurveyMeta(randomLocations, homeLocation, 'R');
+
+                    var locations = _.shuffle(_.flatten([mostFreqLocations, randomLocations, leastFreqLocations]));
+
+                    processLocations(locations);
+                });
+            });
+        });
     }
 
     function processLocations(locations) {
@@ -526,6 +693,40 @@ $(function() {
                 // "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
+<<<<<<< HEAD
+=======
+            "<ol>" +
+            // "<li class='question'>" +
+            // "<div class='qtext'> Do you remember this place?</div>" +
+            // "<div class='qanswers'>" +
+            //     "<input type='radio' name='q{{INDEX}}ans1' value='true'></input><span class='ans-label'> Yes</span>" +
+            //     "<input type='radio' name='q{{INDEX}}ans1' value='false'></input><span class='ans-label'> No</span>" +
+            // "</div>" +
+            // "</li>" +
+            // // "<li class='question'>" +
+            // // 	"<div class='qtext'> Is this an important place to you?</div>" +
+            // // 	"<div class='qanswers'>" +
+            // // 		"<input type='radio' name='q{{INDEX}}ans2' value='true'></input><span class='ans-label'> Yes</span>" +
+            // // 		"<input type='radio' name='q{{INDEX}}ans2' value='false'></input><span class='ans-label'> No</span>" +
+            // // 	"</div>" +
+            // // "</li>" +
+            // "<li class='question'>" +
+            // "<div class='qtext'> Do you want to keep this picture?</div>" +
+            // "<div class='qanswers'>" +
+            // "<input type='radio' name='q{{INDEX}}ans3' value='true'></input><span class='ans-label'> Yes</span>" +
+            // "<input type='radio' name='q{{INDEX}}ans3' value='false'></input><span class='ans-label'> No</span>" +
+            // "</div>" +
+            // "</li>" +
+            // "<li class='question' style='display:none'>" +
+            // "<div class='qtext'> Were you traveling alone?</div>" +
+            // "<div class='qanswers'>" +
+            // "<input type='radio' name='q{{INDEX}}ans4' value='true'></input><span class='ans-label'> Yes</span>" +
+            // "<input type='radio' name='q{{INDEX}}ans4' value='false'></input><span class='ans-label'> No</span>" +
+            // "</div>" +
+            // "</li>" +
+            "</ol>" +
+            "<pre class='location-meta'>{{LOCMETA}}</pre>" +
+>>>>>>> origin/master
             "<div style='clear: both;''></div>" +
             "</div>";
 
@@ -537,7 +738,8 @@ $(function() {
                 .replace("{{DATE}}", locations[i].date)
                 .replace("{{LAT}}", locations[i].location.latitude)
                 .replace("{{LON}}", locations[i].location.longitude)
-                .replace("{{MILLIS}}", locations[i].location.millis);
+                .replace("{{MILLIS}}", locations[i].location.millis)
+                .replace("{{LOCMETA}}", "" + locations[i].pickType + (locations[i].homeDist * 1000).toFixed(0));
 
             questionsHtml += questionHtml;
         });
@@ -617,13 +819,44 @@ $(function() {
         $("#q0").show();
         $("#nextButton").visible();
 
+<<<<<<< HEAD
+=======
+        $("#submitButton").click(function() {
+            var questions = $(".location-questions");
+            var answers = [];
+            // if (ambiance) ambiance.pause();
+
+            questions.each(function(i, locQuestion) {
+                var url = $(locQuestion).find("img").attr("src");
+                var questions = $(locQuestion).find(".question");
+
+                var answer = {
+                    "url": url,
+                    "q1": $(questions[0]).find("input:checked").attr("value") || null,
+                    "q2": $(questions[1]).find("input:checked").attr("value") || null,
+                    "q3": $(questions[2]).find("input:checked").attr("value") || null,
+                };
+
+                answers.push(answer);
+            });
+
+            console.log(answers);
+
+            yesCounter = 0;
+            answers.forEach(function(answer) {
+                if (answer["q1"] == "true")
+                    yesCounter++;
+            });
+            alert("You remember " + yesCounter + " our of " + answers.length + " places");
+        });
+>>>>>>> origin/master
         $("#nextButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
 
 
-            $("#submitButton").visible();
+            // $("#submitButton").visible();
             $("#backButton").visible();
             if (imageIndex < urls.length - 1) {
                 $("#q" + imageIndex).hide();
@@ -646,11 +879,11 @@ $(function() {
         $("#backButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");
-            if (ambiance) ambiance.pause();
+            // if (ambiance) ambiance.pause();
 
             $("#nextButton").visible();
-            $("#submitButton").visible();
-            if (ambiance) ambiance.pause();
+            // $("#submitButton").visible();
+            // if (ambiance) ambiance.pause();
             if (imageIndex > 0) {
                 imageIndex--;
             }
@@ -745,7 +978,8 @@ $(function() {
             results[date].push({
                 latitude: lat,
                 longitude: lon,
-                millis: timeMs
+                millis: timeMs,
+                date: date
             });
         });
 
