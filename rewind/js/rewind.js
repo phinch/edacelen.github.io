@@ -457,7 +457,7 @@ $(function() {
         var tried = 0;
         var completed = false;
 
-        var locsToTry = _.last(ascLocsWithFreqs, tries).map(function(locWithFreq) { return locWithFreq.locDate; });
+        var locsToTry = _.last(ascLocsWithFreqs, tries).reverse().map(function(locWithFreq) { return locWithFreq.locDate; });
         
         locsToTry.forEach(function(location) {
             var streetviewUrl = generateStreetViewUrl(location);
