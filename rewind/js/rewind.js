@@ -60,7 +60,6 @@ $(function() {
                 });
 
                 routeSequence.done(function(player) {
-<<<<<<< HEAD
                     $("#playButton").html("Play Rewind");
                     $("#playButton").css("background-color", "#009aff");
                     $("#playButton").css("color", "white");
@@ -72,15 +71,7 @@ $(function() {
                         $(pano.parentNode).find('.location').hide();
                         player.play();
                     });
-                   
-=======
-                    $(pano).find("img").hide();
-                    $(pano).find("canvas").show();
-                    $(pano).show();
-                    $(pano.parentNode).find('.location').hide();
-                    $(pano.parentNode).find('.loading-gif').hide();
-                    player.play();
->>>>>>> origin/master
+
                     // ambiance = new Audio("./audio/thunder.mp3");
                     // ambiance.play();
 
@@ -344,9 +335,13 @@ $(function() {
 
         // TODO : account for some hours that are skipped in data
         var re = new RegExp(datetime.format('YYYYMMDDHH')+'[^,]{16}');
-        var myWeather = weatherData.match(re)[0];
-        var precip = myWeather.substring(25);
-        console.log(myWeather+":"+precip);
+        var myWeather = weatherData.match(re);
+        var precip = 0;
+        if (myWeather) {
+            myWeather = myWeather[0];
+            precip = myWeather.substring(25);
+        }
+        console.log(myWeather+" precipitation? "+precip);
         // var sprinkle = [11, 12, 13, 14, 15];
         // var drizzle = [17, 18, 19, 20, 21];
         // var rain = [23, 24, 25, 26, 27];
@@ -693,9 +688,7 @@ $(function() {
                 // "<img class='loading-gif' src='img/loading.gif' style='position:absolute; top:0px; left:0px; width:100px; margin:270px 270px;'></img>"+
                 "<div class='hyperlapse' style='display:none'></div>" +
             "</div>" +
-<<<<<<< HEAD
-=======
-            "<ol>" +
+            //"<ol>" +
             // "<li class='question'>" +
             // "<div class='qtext'> Do you remember this place?</div>" +
             // "<div class='qanswers'>" +
@@ -724,9 +717,8 @@ $(function() {
             // "<input type='radio' name='q{{INDEX}}ans4' value='false'></input><span class='ans-label'> No</span>" +
             // "</div>" +
             // "</li>" +
-            "</ol>" +
+            //"</ol>" +
             "<pre class='location-meta'>{{LOCMETA}}</pre>" +
->>>>>>> origin/master
             "<div style='clear: both;''></div>" +
             "</div>";
 
@@ -773,9 +765,6 @@ $(function() {
                 var lat = $img.attr("data-lat");
                 var lon = $img.attr("data-lon");
 
-                console.log('Creating Rewind from ' + $img.attr("data-date")
-                    + ' at lat,lon: ' + $img.attr("data-lat") + ', ' + $img.attr("data-lon"));
-
                 // $img.hide();
                 // $img.nextAll(".play-icon").hide();
                 // $img.nextAll(".hyperlapse").show();
@@ -785,7 +774,7 @@ $(function() {
                     // callback(image);
                 };
 
-                console.log('Creating rewind from '+$img.attr("data-date")+'at ('
+                console.log('Creating Rewind from '+$img.attr("data-date")+' at ('
                 +$img.attr("data-lat")+', '+$img.attr("data-lon")+')');
 
                 createHyperlapse(locations, $img.nextAll(".hyperlapse")[0]);
@@ -819,8 +808,6 @@ $(function() {
         $("#q0").show();
         $("#nextButton").visible();
 
-<<<<<<< HEAD
-=======
         $("#submitButton").click(function() {
             var questions = $(".location-questions");
             var answers = [];
@@ -849,7 +836,7 @@ $(function() {
             });
             alert("You remember " + yesCounter + " our of " + answers.length + " places");
         });
->>>>>>> origin/master
+
         $("#nextButton").click(function() {
             $("div.hyperlapse").hide().find("*").remove();
             $("img.location, canvas.location").show().parent().removeClass("loading-hyperlapse");

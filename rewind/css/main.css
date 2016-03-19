@@ -135,3 +135,7 @@ div.hyperlapse canvas {
 #file-drop-area.dragging {
 	border: 3px dashed rgb(0,143,237);
 }
+
+.location-meta {
+	margin-left: 650px !important;
+}
