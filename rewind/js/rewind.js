@@ -596,9 +596,9 @@ $(function() {
             )
         );
 
-        var imageCount = 30;
-        var mostFreqImageCount = 5;
-        var leastFreqImageCount = 13;
+        var imageCount = 15;
+        var mostFreqImageCount = 3;
+        var leastFreqImageCount = 7;
         var randomImageCount = imageCount - mostFreqImageCount - leastFreqImageCount;
 
         getMostFrequentLocations(ascLocsWithFreqs, mostFreqImageCount, function(mostFreqLocations) {
