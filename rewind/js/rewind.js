@@ -644,7 +644,7 @@ $(function() {
             )
         );
 
-        var imageCount = 10;
+        var imageCount = 6;
         var mostFreqImageCount = 3;
         var leastFreqImageCount = 5;
         var randomImageCount = imageCount - mostFreqImageCount - leastFreqImageCount;
