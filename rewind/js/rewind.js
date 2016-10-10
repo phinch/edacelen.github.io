@@ -37,21 +37,23 @@ $(function() {
     
     function createHyperlapse(locations, pano) {
         //$(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
-
+        console.log(locations);
         if (locations.length < 2) {
             alert("too few location points (count: " + locations.length + ") for the day");
             return;
         }
-
+        
         var routes = sliceLocationsToRoutes(locations);
         var gResults = [];
+
+        console.log(routes);
 
         for (var i = 0; i < routes.length; i++) {
             getGoogleRoute(routes, gResults, i, function() {
                 var routeSequence = StreetviewSequence($(pano), {
                     route: mergeGoogleResponses(gResults),
                     duration: 10000,
-                    totalFrames: 200,
+                    totalFrames: 20,
                     loop: true,
                     width: panoWidth,
                     height: panoHeight,
@@ -63,7 +65,6 @@ $(function() {
                     $("#playButton").html("Play Rewind");
                     $("#playButton").css("background-color", "#009aff");
                     $("#playButton").css("color", "white");
-                    
                     $("#playButton").click(function() {
                         $(pano).find("img").hide();
                         $(pano).find("canvas").show();
@@ -87,6 +88,7 @@ $(function() {
                 });
             });
         }
+        
     }
 
     function mergeGoogleResponses(googleResponses) {
@@ -274,7 +276,8 @@ $(function() {
 
         reader.readAsText(file);
         reader.addEventListener('load', function(e) {
-            processLocationExport(reader.result);
+            //processLocationExport(reader.result);
+            pullRoutesfromLocs(reader.result);
         });
     }
 
@@ -634,6 +637,7 @@ $(function() {
     }
 
     function processLocationExport(fileContents) {
+
         locationsByDate = parseLocationJson(fileContents);
 
         var ascLocsWithFreqs = sortLocationsByFreq(
@@ -664,19 +668,242 @@ $(function() {
                 });
             });
         });
+
     }
 
-    function processLocations(locations) {
+    function pullRoutesfromLocs(fileContents){
+        var days = parseLocationJson(fileContents);
+        for(var d in days){
+            days[d].sort(function(a,b) {return (a.millis > b.millis) ? 1 : ((b.millis > a.millis) ? -1 : 0);});
+        }
+
+        //Data is now split into days sorted in order of timestamp (ascending)
+
+        //We want to pull out an interesting route from the data
+        //"Interesting" is subjective; I'll define some hopefully fairly standard characteristics here:
+        // Route should be (somewhat) unique within the data
+        // Route's starting point or destination should be an points of "interest" (POI) (again, subjective), or should contain POIs
+
+        //As a basic way of identifying POIs, we can create a list of places where the traveller stays for some period of time
+        //This might include a museum or a park, but also more mundane places like a hotel or a train station, for example
+        //If the user starts from, ends at, or passes(?) along the way at one of these places, the route may become more interesting
+
+        //Multiple methods for clustering; K-means may be infeasible because we can't know the number of clusters we want;
+        // for now, I'm using DBSCAN and averaging the labels to find cluster centers
+        // Disadvantage of DBSCAN is that I have to specify a set size for a cluster, which can be limiting
+        // Other options are heirarchical clustering and K-Means.
+
+        //We'll find the best route from each day and return the starting latitude and longitude 
+        var route_starts = []
+        for(var d in days){
+            data = days[d]
+            latlngs = []
+            latlngtime = []
+            for(var l in data){
+                var line = data[l]
+                latlngs.push([parseFloat(line['latitude']), parseFloat(line['longitude'])])
+                latlngtime.push([parseFloat(line['latitude']), parseFloat(line['longitude']), parseInt(line['millis'])])
+            }
+            var poiscanner = new DBSCAN();
+            // This will return the assignment of each point to a cluster number, 
+            // points which have  -1 as assigned cluster number are noise.
+            var pois = poiscanner.run(latlngs, 0.0005, 10);
+
+            //Associate points with their POIs
+            scanner_clusters = {}
+            for(var i = 0; i < pois.length; i++){
+                scanner_clusters[i] = [0, 0, 0];
+                cluster = pois[i];
+                for(var j = 0; j < cluster.length; j++){
+                    point = latlngs[cluster[j]];
+                    scanner_clusters[i][0] += point[0];
+                    scanner_clusters[i][1] += point[1];
+                    scanner_clusters[i][2] += 1;
+
+                    latlng = latlngtime[cluster[j]];
+                    latlng.push(i);
+                }
+
+                //Average to obtain the center of the poi (for viz purposes)
+                scanner_clusters[i][0] /= scanner_clusters[i][2];
+                scanner_clusters[i][1] /= scanner_clusters[i][2];
+            }
+
+            for(var i = 0; i < poiscanner.noise.length; i++){
+                latlng = latlngtime[poiscanner.noise[i]];
+                latlng.push(-1);
+            }
+          
+            //------------------------------
+            //Another important feature is the uniqueness of a route
+            //We can create an index measuring the uniqueness of each point, with a slight fuzzing of the data
+            
+            //Uniqueness here is binary, where anything that gets clustered is not unique 
+            var uniquescanner = new DBSCAN();
+            var uniques = uniquescanner.run(latlngs, 0.00005, 2);
+
+            for(var i = 0; i < uniques.length; i++){
+                scanner_clusters[i] = [0, 0, 0];
+                cluster = uniques[i];
+                for(var j = 0; j < cluster.length; j++){
+                    point = latlngs[cluster[j]];
+                    latlng = latlngtime[cluster[j]];
+                    latlng.push(i);
+                }
+            }
+
+            //-1 (noise) means unique; >= 0 means the point was clustered, so it's not unique
+            for(var i = 0; i < uniquescanner.noise.length; i++){
+                latlng = latlngtime[uniquescanner.noise[i]];
+                latlng.push(-1);
+            }
+            
+            //------------------------------
+            //We can partition the data into "routes"; for now, let's say a route ends when the user stays in a POI for 30 minutes (1800000 millisecs)
+            //This allows the user to amble and stop at certain places within the larger picture of going somewhere, 
+            // thereby flagging routes with interesting, but intermediate, stops
+            //These routes are consecutive and non-overlapping (i.e. each lat/lng is in exactly one route)
+            //However, a route is only valid if it goes outside of a POI (i.e. cannot exclusively be within a POI, like sleeping)
+                
+            routes = []
+            curr_route = []
+            poi_count = 0
+            poi_time_count = 0
+            prev_time = -1
+            curr_time = -1
+            curr_poi = -2
+            changed_pois = false
+
+            for(var i = 0; i < latlngtime.length; i++){
+                point = latlngtime[i]
+                latlng = [point[0], point[1]]
+                curr_time = point[2]
+                if(prev_time == -1){
+                    prev_time = curr_time
+                }
+                label = point[3]
+                //Not in POI: considered to be moving along a route
+                if(label == -1){
+                    poi_count = 0
+                    poi_time_count = 0
+                    curr_poi = -1
+                    changed_pois = true
+                }
+                //In a POI: If we stay in this POI for too long, the route ends
+                else{
+                    poi_count += 1
+                    poi_time_count += curr_time - prev_time
+                    if(curr_poi != label && curr_poi != -2){
+                        changed_pois = true
+                        poi_count = 0
+                        poi_time_count = 0
+                    }
+                    curr_poi = label
+                    if(poi_time_count >= 300){ //300 = 5 minutes; 900 = 15 minutes
+                        poi_count = 0
+                        poi_time_count = 0
+                        if(changed_pois && curr_route.length >= 10){
+                            //Split the route into 10-minute pieces
+                            splits = 0
+                            start_time = curr_route[0][2]
+                            end_time = start_time + 600;
+                            mini_route = []
+                            for(var l in curr_route){
+                                latlng = curr_route[l];
+                                if(start_time >= end_time && mini_route.length >= 5){
+                                    splits++;
+                                    console.log(mini_route);
+                                    routes.push(mini_route);
+                                    start_time = latlng[2];
+                                    end_time = start_time + 600;
+                                    console.log(start_time, end_time);
+                                    mini_route = [];
+                                }else if(start_time >= end_time){
+                                    start_time = latlng[2];
+                                    end_time = start_time + 600;
+                                    mini_route = [];
+                                }
+                                mini_route.push(latlng);
+                                start_time += latlng[2]-start_time;
+                            }
+                            if(splits > 0){
+                                routes[routes.length-1].concat(mini_route)
+                            }else if(mini_route.length >= 5){
+                                routes.push(mini_route);
+                            }
+                        }
+                        curr_route = [point]
+                        changed_pois = false
+                        continue
+                    }
+                }
+                        
+                //We only start tracking the route once we leave the POI we started in
+                if(changed_pois){
+                    curr_route.push(point)
+                }
+            }
+            console.log(routes.length + " routes found on " + d);
+            
+            if(routes.length == 0){
+                continue;
+            }
+            
+            //------------------------------
+            //These two metrics, uniqueness and the presence of POIs, can be used to score routes and then select an interesting one
+            //Experimentally, each unique lat/lng is worth 1 point, and each lat/lng spent in a POI is worth 1 point
+            //Each lat/lng's score is modified by its accuracy(?)
+            //Then the total score is divided by the total number of lat/lngs, to standardize scores
+            
+            route_scores = []
+            for(var r in routes){
+                var route = routes[r];
+                var score = 0.0
+                for(var l in route){
+                    latlng = route[l];
+                    if(latlng[4] == -1){ //Unique point
+                        score += 1
+                    }
+                    if(latlng[3] != -1){ //POI
+                        score += 1
+                    }
+                }
+                //Normalize for number of points
+                score /= route.length;
+                route_scores.push([route, score])
+            }
+        
+            top_route = [[], -1]
+            for(var r in route_scores){
+                route = route_scores[r];
+                if(route[1] > top_route[1]){
+                    top_route = route
+                }
+            }
+                    
+            top_route = top_route[0];
+            route_starts.push(top_route[0]);
+        }
+        for(var r in route_starts){
+            route_starts[r]['latitude'] = route_starts[r][0];
+            route_starts[r]['longitude'] = route_starts[r][1];
+            route_starts[r]['millis'] = route_starts[r][2];
+            route_starts[r]['date'] = moment.unix(route_starts[r]['millis']).format('YYYY-MM-DD');
+        }
+        processLocations(route_starts, days);
+    }
+
+    function processLocations(locations, days) {
+        console.log(locations);
         $("#upload-wrapper").hide();
 
         var imageIndex = 0;
 
         //var urls = generateStreetViewUrls(locations, false);
-        var flatLocations = _.pluck(locations, "location");
 
         // making this true filters the flatLocations array, filtering similar locations. 
         // Cannot match dates with locations in this case. urls does not match flatLocations.
-        var urls = generateStreetViewUrls(flatLocations, false);
+        var urls = generateStreetViewUrls(locations, false);
 
         var questionsHtml = "";
 
@@ -728,10 +955,10 @@ $(function() {
                 .replace("{{SRC}}", url)
                 .replace(/{{INDEX}}/g, i)
                 .replace("{{DATE}}", locations[i].date)
-                .replace("{{LAT}}", locations[i].location.latitude)
-                .replace("{{LON}}", locations[i].location.longitude)
-                .replace("{{MILLIS}}", locations[i].location.millis)
-                .replace("{{LOCMETA}}", "" + locations[i].pickType + (locations[i].homeDist * 1000).toFixed(0));
+                .replace("{{LAT}}", locations[i].latitude)
+                .replace("{{LON}}", locations[i].longitude)
+                .replace("{{MILLIS}}", locations[i].millis)
+                //.replace("{{LOCMETA}}", "" + locations[i].pickType + (locations[i].homeDist * 1000).toFixed(0));
 
             questionsHtml += questionHtml;
         });
@@ -759,7 +986,8 @@ $(function() {
 
                 $(this).addClass("loading-hyperlapse");
                 var $img = $(this).find(".location");
-                var locations = getLocationsOnDate($img.attr("data-date"));
+                console.log(days[$img.attr("data-date")]);
+                var locations = getRoutefromStart($img.attr("data-millis"), days[$img.attr("data-date")]);
 
                 var millis = $img.attr("data-millis");
                 var lat = $img.attr("data-lat");
@@ -887,6 +1115,32 @@ $(function() {
         });
     }
 
+    function getRoutefromStart(millis, day){
+        //Find the start of the route within the day
+        var p = 0;
+        for(; p < day.length; p++){
+            if(day[p]['millis'] == millis){
+                break;
+            }   
+        }
+        start = day[p];
+        console.log(start);
+        //Pull out 10 minutes
+        route_points = [start]
+        end_time = parseInt(start['millis']) + 600; //number of seconds later to end the route (e.g. 600 = 10 minutes)
+        p++;
+        for(; p < day.length; p++){
+            point = day[p];
+            console.log(end_time, point['millis']);
+            if(parseInt(point['millis']) >= end_time){
+                break;
+            }
+            route_points.push(point);
+        }
+        console.log(route_points);
+        return route_points;
+    }
+
     function getLocationsOnDate(date) {
         var locationHtml = "";
 
@@ -957,8 +1211,13 @@ $(function() {
             //console.log("Latitude: " + lat + "    Longitude: " + lon);
 
             //time checks
+            //convert to seconds
             var timeMs = parseInt(location.timestampMs);
-            var date = moment(timeMs).format("YYYY-MM-DD");
+            if(timeMs / 10000000000 > 1){
+                location.timestampMs = Math.round(parseInt(location.timestampMs)/1000);
+                timeMs = location.timestampMs;
+            }
+            var date = moment.unix(timeMs).format("YYYY-MM-DD");
             if (!results[date]) {
                 results[date] = [];
             }
