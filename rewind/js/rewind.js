@@ -37,7 +37,6 @@ $(function() {
     
     function createHyperlapse(locations, pano) {
         //$(pano).html("<img src='img/loading.gif' style='width:50px; margin:275px 275px'></img>");
-        console.log(locations);
         if (locations.length < 2) {
             alert("too few location points (count: " + locations.length + ") for the day");
             return;
@@ -45,8 +44,6 @@ $(function() {
         
         var routes = sliceLocationsToRoutes(locations);
         var gResults = [];
-
-        console.log(routes);
 
         for (var i = 0; i < routes.length; i++) {
             getGoogleRoute(routes, gResults, i, function() {
@@ -1131,13 +1128,11 @@ $(function() {
         p++;
         for(; p < day.length; p++){
             point = day[p];
-            console.log(end_time, point['millis']);
             if(parseInt(point['millis']) >= end_time){
                 break;
             }
             route_points.push(point);
         }
-        console.log(route_points);
         return route_points;
     }
 
